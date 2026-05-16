@@ -1,0 +1,19 @@
+Bonuses
+Deductions
+Net salary
+Salary period (monthly)
+Duration(Leaves)
+
+Payslip Table (Very Important Upgrade)
+
+Instead of only salary table:
+
+Payslip
+
+payslip_id
+employee_id
+month
+total_salary
+generated_date
+
+👉 Makes it look like a real HR system

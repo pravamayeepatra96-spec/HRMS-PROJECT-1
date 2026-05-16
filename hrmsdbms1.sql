@@ -1,0 +1,1 @@
+SELECT * FROM hrmsdb1.user_user;

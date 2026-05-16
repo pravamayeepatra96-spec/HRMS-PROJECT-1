@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Salary Management{% endblock %}
+
+{% block header_title %}Salary Management{% endblock %}
+
+{% block content %}
+<div class="actions-bar">
+    <button type="button" class="btn btn-primary" id="addSalaryBtn">Add Salary</button>
+</div>
+
+<div class="table-container">
+    <table class="employee-table">
+        <thead>
+            <tr>
+                <th>Emp ID</th>
+                <th>Name</th>
+                <th>Role</th>
+                <th>Basic Salary</th>
+                <th>Bonuses</th>
+                <th>Deductions</th>
+                <th>Net Salary</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for salary in salaries %}
+            <tr>
+                <td>{{ salary.empid|default:salary.user.empid }}</td>
+                <td>{{ salary.user.name|default:'Unknown' }}</td>
+                <td>{{ salary.role|default:salary.user.role }}</td>
+                <td>{{ salary.basic_salary }}</td>
+                <td>{{ salary.bonuses }}</td>
+                <td>{{ salary.deductions }}</td>
+                <td>{{ salary.net_salary }}</td>
+                <td class="actions">
+                    <button type="button" class="btn btn-edit edit-btn"
+                            data-action="{% url 'salary_update' salary.id %}"
+                            data-user-id="{{ salary.user.id }}"
+                            data-role="{{ salary.role|default:salary.user.role }}"
+                            data-basic="{{ salary.basic_salary }}"
+                            data-bonuses="{{ salary.bonuses }}"
+                            data-deductions="{{ salary.deductions }}"
+                            data-net="{{ salary.net_salary }}">
+                        Edit
+                    </button>
+                    <form method="post" action="{% url 'salary_delete' salary.id %}" style="display:inline; margin-left:0.5rem;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-delete" onclick="return confirm('Delete this salary record?');">
+                            Delete
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8">No salary records found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Salary Modal -->
+<div id="salaryModal" class="modal">
+    <div class="modal-content" style="max-height: 85vh; overflow: hidden;">
+        <div class="modal-header">
+            <h3 id="modalTitle">Add Salary</h3>
+            <span class="close">&times;</span>
+        </div>
+        <form id="salaryForm" method="post" action="{% url 'salary_create' %}" class="modal-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="user_id">Employee</label>
+                <select id="user_id" name="user_id" required>
+                    <option value="">Select employee</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" data-role="{{ user.role }}">{{ user.name }} - {{ user.role }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="role">Role</label>
+                <input type="text" id="role" name="role" readonly>
+            </div>
+            <div class="form-group">
+                <label for="basic_salary">Basic Salary</label>
+                <input type="number" step="0.01" id="basic_salary" name="basic_salary" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="bonuses">Bonuses</label>
+                <input type="number" step="0.01" id="bonuses" name="bonuses" min="0" value="0">
+            </div>
+            <div class="form-group">
+                <label for="deductions">Deductions</label>
+                <input type="number" step="0.01" id="deductions" name="deductions" min="0" value="0">
+            </div>
+            <div class="form-group">
+                <label for="net_salary">Net Salary</label>
+                <input type="number" step="0.01" id="net_salary" name="net_salary" readonly>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelSalary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const salaryModal = document.getElementById('salaryModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const closeSalary = document.querySelector('#salaryModal .close');
+    const cancelSalary = document.getElementById('cancelSalary');
+    const salaryForm = document.getElementById('salaryForm');
+    const userSelect = document.getElementById('user_id');
+    const roleInput = document.getElementById('role');
+    const basicInput = document.getElementById('basic_salary');
+    const bonusesInput = document.getElementById('bonuses');
+    const deductionsInput = document.getElementById('deductions');
+    const netInput = document.getElementById('net_salary');
+    const addSalaryBtn = document.getElementById('addSalaryBtn');
+
+    const roleDefaults = {
+        'Employee': 30000,
+        'Manager': 60000,
+        'Team Lead': 50000,
+        'HR': 45000,
+        'Intern': 15000
+    };
+
+    function updateNet() {
+        const basic = parseFloat(basicInput.value) || 0;
+        const bonuses = parseFloat(bonusesInput.value) || 0;
+        const deductions = parseFloat(deductionsInput.value) || 0;
+        netInput.value = (basic + bonuses - deductions).toFixed(2);
+    }
+
+    function openSalaryModal(editMode = false) {
+        salaryModal.style.display = 'block';
+        if (!editMode) {
+            modalTitle.textContent = 'Add Salary';
+            salaryForm.action = '{% url "salary_create" %}';
+            userSelect.disabled = false;
+            userSelect.value = '';
+            roleInput.value = '';
+            basicInput.value = '';
+            bonusesInput.value = '0.00';
+            deductionsInput.value = '0.00';
+            netInput.value = '0.00';
+        }
+    }
+
+    function closeModal() {
+        salaryModal.style.display = 'none';
+    }
+
+    function setRoleAndDefaultSalary(role) {
+        roleInput.value = role;
+        if (!basicInput.value || basicInput.value === '0') {
+            basicInput.value = roleDefaults[role] || 0;
+        }
+        updateNet();
+    }
+
+    addSalaryBtn.onclick = () => openSalaryModal(false);
+    closeSalary.onclick = closeModal;
+    cancelSalary.onclick = closeModal;
+
+    window.onclick = function(event) {
+        if (event.target == salaryModal) {
+            closeModal();
+        }
+    }
+
+    userSelect.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        const role = selected.dataset.role || '';
+        setRoleAndDefaultSalary(role);
+    });
+
+    [basicInput, bonusesInput, deductionsInput].forEach(input => {
+        input.addEventListener('input', updateNet);
+    });
+
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.onclick = function() {
+            modalTitle.textContent = 'Edit Salary';
+            salaryForm.action = this.dataset.action;
+            userSelect.value = this.dataset.userId;
+            userSelect.disabled = true;
+            roleInput.value = this.dataset.role;
+            basicInput.value = this.dataset.basic;
+            bonusesInput.value = this.dataset.bonuses;
+            deductionsInput.value = this.dataset.deductions;
+            netInput.value = this.dataset.net;
+            updateNet();
+            salaryModal.style.display = 'block';
+        };
+    });
+</script>
+{% endblock %}

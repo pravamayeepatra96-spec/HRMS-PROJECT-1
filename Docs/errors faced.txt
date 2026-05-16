@@ -1,0 +1,7 @@
+errors faced
+1. telegram connect was not done because app was not created
+2. codes for the Django modesls
+3.Codes for the apps 
+4. before start of any table we need to create its app
+5. login/user page requirements- templates, forms.py, views.py and urls.py 
+6. 

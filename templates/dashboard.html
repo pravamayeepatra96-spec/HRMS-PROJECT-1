@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - {{ company_name }}{% endblock %}
+
+{% block content %}
+<div class="actions-bar">
+    <button id="addEmployeeBtn" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Employee
+    </button>
+    <div class="stats">
+        <div class="stat-card">
+            <i class="fas fa-users"></i>
+            <span>Total Employees: {{ employees|length }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- Employee Table -->
+<div class="table-container">
+    <table id="employeeTable" class="employee-table">
+        <thead>
+            <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Role</th>
+                <th>Joining Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for employee in employees %}
+            <tr data-id="{{ employee.id }}">
+                <td>{{ employee.empid }}</td>
+                <td>{{ employee.name }}</td>
+                <td>{{ employee.email }}</td>
+                <td>{{ employee.phone_no }}</td>
+                <td>
+                    <span class="role-badge role-{{ employee.role|lower|cut:' ' }}">{{ employee.role }}</span>
+                </td>
+                <td>{{ employee.joining_date|date:"M d, Y" }}</td>
+                <td class="actions">
+                    <button class="btn btn-edit" onclick="editEmployee({{ employee.id }})">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    {% if employee.role != 'Admin' %}
+                    <button class="btn btn-delete" onclick="deleteEmployee({{ employee.id }}, '{{ employee.name }}')">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add/Edit Employee Modal -->
+<div id="employeeModal" class="modal">
+    <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
+        <div class="modal-header">
+            <h3 id="modalTitle">Add Employee</h3>
+            <span class="close">&times;</span>
+        </div>
+        <form id="employeeForm">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="phone">Phone:</label>
+                <input type="text" id="phone" name="phone" required>
+            </div>
+            <div class="form-group">
+                <label for="role">Role:</label>
+                <select id="role" name="role" required>
+                    <option value="Employee">Employee</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Team Lead">Team Lead</option>
+                    <option value="HR">HR</option>
+                    <option value="Intern">Intern</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="joining_date">Joining Date:</label>
+                <input type="date" id="joining_date" name="joining_date" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <div class="modal-actions">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,727 @@
+import os
+import django
+import logging
+from datetime import datetime
+
+from asgiref.sync import sync_to_async
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hrms.settings")
+django.setup()
+
+from django.utils import timezone
+from user.models import User
+from telebot.models import TelegramDetails
+from leave.models import LeavePolicy, LeaveBalance, ApplyLeave
+from attendance.models import Attendance
+from salary.models import Salary
+
+logging.basicConfig(level=logging.INFO)
+
+TOKEN = "8619738165:AAElNNoC4bYuKP1qDN0r0BMVqn7JL3QQxu8"
+    
+
+@sync_to_async
+def get_verified_user(empid, company_id):
+    return User.objects.select_related("Company").filter(
+        empid=empid,
+        Company__code=company_id,
+        status=1
+    ).first()
+
+
+@sync_to_async
+def save_telegram_user(user, chat_id, telegram_name):
+    existing = TelegramDetails.objects.filter(user=user).first()
+
+    if existing:
+        existing.chat_id = chat_id
+        existing.empid = user.empid
+        existing.comp_code = user.Company.code
+        existing.phone_no = user.phone_no
+        existing.telegram_name = telegram_name
+        existing.status = 1
+        existing.save()
+        return existing
+
+    return TelegramDetails.objects.create(
+        user=user,
+        empid=user.empid,
+        comp_code=user.Company.code,
+        phone_no=user.phone_no,
+        chat_id=chat_id,
+        telegram_name=telegram_name,
+        status=1
+    )
+
+
+@sync_to_async
+def get_telegram_user(chat_id):
+    return TelegramDetails.objects.select_related(
+        "user",
+        "user__Company"
+    ).filter(chat_id=chat_id, status=1).first()
+
+
+@sync_to_async
+def get_salary(user):
+    return Salary.objects.filter(user=user, status=1).first()
+
+
+@sync_to_async
+def get_leave_policy(user):
+    return LeavePolicy.objects.filter(user=user, status=1).first()
+
+
+@sync_to_async
+def get_leave_balance(user):
+    return LeaveBalance.objects.filter(user=user, status=1).first()
+
+
+@sync_to_async
+def get_attendance(empid):
+    return Attendance.objects.filter(empid=empid, status=1).order_by("-date").first()
+
+
+@sync_to_async
+def mark_attendance_login(user):
+    today = timezone.localdate()
+    now_time = timezone.localtime().time()
+
+    attendance, created = Attendance.objects.get_or_create(
+        empid=user.empid,
+        date=today,
+        defaults={
+            "log_in_time": now_time,
+            "status": 1,
+        }
+    )
+    return attendance, created
+
+
+@sync_to_async
+def save_leave_application(user, from_date, to_date, leave_type, reason):
+    return ApplyLeave.objects.create(
+        user=user,
+        from_date=from_date,
+        to_date=to_date,
+        type_of_leave=leave_type,
+        reason_of_leave=reason,
+        approved=False,
+        rejected=False,
+        status=1
+    )
+
+
+@sync_to_async
+def get_approver_chat_ids(employee_role):
+    if employee_role.lower() == "manager":
+        approvers = TelegramDetails.objects.select_related("user").filter(
+            user__role__iexact="Admin",
+            status=1
+        )
+    else:
+        approvers = TelegramDetails.objects.select_related("user").filter(
+            user__role__iexact="Manager",
+            status=1
+        )
+
+    return list(approvers)
+
+
+@sync_to_async
+def get_next_pending_leave_for_approver(approver):
+    role = approver.role.lower()
+
+    if role == "manager":
+        leave = ApplyLeave.objects.select_related("user").filter(
+            approved=False,
+            rejected=False,
+            status=1
+        ).exclude(
+            user__role__iexact="Manager"
+        ).exclude(
+            user__role__iexact="Admin"
+        ).order_by("created_at").first()
+
+    elif role == "admin":
+        leave = ApplyLeave.objects.select_related("user").filter(
+            user__role__iexact="Manager",
+            approved=False,
+            rejected=False,
+            status=1
+        ).order_by("created_at").first()
+    else:
+        return None
+
+    return leave
+
+
+@sync_to_async
+def approve_leave_request(leave_id, approver):
+    try:
+        leave = ApplyLeave.objects.select_related("user").get(id=leave_id, status=1)
+    except ApplyLeave.DoesNotExist:
+        return {"success": False, "message": "❌ Leave request not found."}
+
+    approver_role = approver.role.lower()
+    employee_role = leave.user.role.lower()
+
+    if employee_role == "admin":
+        return {"success": False, "message": "❌ Admin cannot apply leave."}
+
+    if employee_role == "manager" and approver_role != "admin":
+        return {"success": False, "message": "❌ Only Admin can approve Manager leave."}
+
+    if employee_role != "manager" and approver_role != "manager":
+        return {"success": False, "message": "❌ Only Manager can approve employee leave."}
+
+    if leave.approved:
+        return {"success": False, "message": "⚠️ This leave is already approved."}
+
+    if leave.rejected:
+        return {"success": False, "message": "⚠️ This leave is already rejected."}
+
+    days = (leave.to_date - leave.from_date).days + 1
+
+    balance = LeaveBalance.objects.filter(user=leave.user, status=1).first()
+
+    if not balance:
+        return {"success": False, "message": "❌ Leave balance not found for employee."}
+
+    if balance.remaining_leaves < days:
+        return {"success": False, "message": "❌ Not enough remaining leaves."}
+
+    leave.approved = True
+    leave.rejected = False
+    leave.save()
+
+    balance.used_leaves += days
+    balance.remaining_leaves -= days
+    balance.save()
+
+    tg = TelegramDetails.objects.filter(user=leave.user, status=1).first()
+
+    return {
+        "success": True,
+        "message": f"✅ Leave approved for {leave.user.name}.",
+        "employee_chat_id": tg.chat_id if tg else None,
+        "employee_message": (
+            f"✅ Your leave has been APPROVED.\n\n"
+            f"From: {leave.from_date}\n"
+            f"To: {leave.to_date}\n"
+            f"Type: {leave.type_of_leave}\n"
+            f"Remaining Leaves: {balance.remaining_leaves}"
+        )
+    }
+
+
+@sync_to_async
+def reject_leave_request(leave_id, approver):
+    try:
+        leave = ApplyLeave.objects.select_related("user").get(id=leave_id, status=1)
+    except ApplyLeave.DoesNotExist:
+        return {"success": False, "message": "❌ Leave request not found."}
+
+    approver_role = approver.role.lower()
+    employee_role = leave.user.role.lower()
+
+    if employee_role == "admin":
+        return {"success": False, "message": "❌ Admin cannot apply leave."}
+
+    if employee_role == "manager" and approver_role != "admin":
+        return {"success": False, "message": "❌ Only Admin can reject Manager leave."}
+
+    if employee_role != "manager" and approver_role != "manager":
+        return {"success": False, "message": "❌ Only Manager can reject employee leave."}
+
+    if leave.approved:
+        return {"success": False, "message": "⚠️ Approved leave cannot be rejected now."}
+
+    if leave.rejected:
+        return {"success": False, "message": "⚠️ This leave is already rejected."}
+
+    leave.approved = False
+    leave.rejected = True
+    leave.save()
+
+    tg = TelegramDetails.objects.filter(user=leave.user, status=1).first()
+
+    return {
+        "success": True,
+        "message": f"❌ Leave rejected for {leave.user.name}.",
+        "employee_chat_id": tg.chat_id if tg else None,
+        "employee_message": (
+            f"❌ Your leave has been REJECTED.\n\n"
+            f"From: {leave.from_date}\n"
+            f"To: {leave.to_date}\n"
+            f"Type: {leave.type_of_leave}"
+        )
+    }
+
+
+def get_main_menu(role=None):
+    keyboard = [
+        ["Attendance", "Attendance Login"],
+        ["Salary", "Leave"],
+    ]
+
+    if role and role.lower() != "admin":
+        keyboard.append(["Apply Leave"])
+
+    if role and role.lower() in ["manager", "admin"]:
+        keyboard.append(["Pending Leaves"])
+
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
+
+
+def get_leave_type_menu():
+    keyboard = [
+        ["Sick", "Casual"],
+        ["Paid", "Compensation"],
+        ["Cancel"]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
+
+
+def get_approval_menu():
+    keyboard = [
+        ["Approve", "Reject"],
+        ["Pending Leaves"],
+        ["Attendance", "Salary", "Leave"],
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
+
+
+async def salary_details(update, tg_user):
+    salary = await get_salary(tg_user.user)
+
+    if not salary:
+        await update.message.reply_text("❌ Salary details not found.")
+        return
+
+    await update.message.reply_text(
+        f"💰 Salary Details\n\n"
+        f"Employee ID: {salary.empid}\n"
+        f"Role: {salary.role}\n"
+        f"Basic Salary: ₹{salary.basic_salary}\n"
+        f"Bonuses: ₹{salary.bonuses}\n"
+        f"Deductions: ₹{salary.deductions}\n"
+        f"Net Salary: ₹{salary.net_salary}"
+    )
+
+
+async def leave_details(update, tg_user):
+    policy = await get_leave_policy(tg_user.user)
+    balance = await get_leave_balance(tg_user.user)
+
+    if not policy and not balance:
+        await update.message.reply_text("❌ Leave details not found.")
+        return
+
+    message = "🍃 Leave Details\n\n"
+
+    if policy:
+        message += (
+            f"Paid Leave: {policy.paid_leave}\n"
+            f"Casual Leave: {policy.casual_leave}\n"
+            f"Sick Leave: {policy.sick_leave}\n"
+            f"Compensation Leave: {policy.compensation_leave}\n\n"
+        )
+
+    if balance:
+        message += (
+            f"Total Leaves: {balance.total_leaves}\n"
+            f"Used Leaves: {balance.used_leaves}\n"
+            f"Remaining Leaves: {balance.remaining_leaves}\n"
+            f"Year: {balance.year}"
+        )
+
+    await update.message.reply_text(message)
+
+
+async def attendance_details(update, tg_user):
+    attendance = await get_attendance(tg_user.user.empid)
+
+    if not attendance:
+        await update.message.reply_text("❌ Attendance details not found.")
+        return
+
+    logout_time = attendance.log_out_time or "Not marked yet"
+
+    await update.message.reply_text(
+        f"🕘 Attendance Details\n\n"
+        f"Employee ID: {attendance.empid}\n"
+        f"Date: {attendance.date}\n"
+        f"Login Time: {attendance.log_in_time}\n"
+        f"Logout Time: {logout_time}"
+    )
+
+
+async def attendance_login(update, tg_user):
+    attendance, created = await mark_attendance_login(tg_user.user)
+
+    if created:
+        await update.message.reply_text(
+            f"✅ Attendance Login Marked\n\n"
+            f"Employee ID: {attendance.empid}\n"
+            f"Date: {attendance.date}\n"
+            f"Login Time: {attendance.log_in_time}"
+        )
+    else:
+        await update.message.reply_text(
+            f"⚠️ Attendance already marked today.\n\n"
+            f"Employee ID: {attendance.empid}\n"
+            f"Date: {attendance.date}\n"
+            f"Login Time: {attendance.log_in_time}"
+        )
+
+
+async def show_pending_leave(update, context, tg_user):
+    leave = await get_next_pending_leave_for_approver(tg_user.user)
+
+    if not leave:
+        context.user_data.pop("selected_leave_id", None)
+        await update.message.reply_text(
+            "✅ No pending leave requests.",
+            reply_markup=get_main_menu(tg_user.user.role)
+        )
+        return
+
+    context.user_data["selected_leave_id"] = leave.id
+
+    await update.message.reply_text(
+        f"📌 Pending Leave Request\n\n"
+        f"Employee: {leave.user.name}\n"
+        f"Role: {leave.user.role}\n"
+        f"From: {leave.from_date}\n"
+        f"To: {leave.to_date}\n"
+        f"Type: {leave.type_of_leave}\n"
+        f"Reason: {leave.reason_of_leave}\n\n"
+        f"Choose Approve or Reject 👇",
+        reply_markup=get_approval_menu()
+    )
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
+    text = update.message.text.strip()
+    text_lower = text.lower()
+    chat_id = update.effective_user.id
+
+    if text_lower in ["hi", "hello", "start", "/start"]:
+        existing_user = await get_telegram_user(chat_id)
+
+        if existing_user:
+            await update.message.reply_text(
+                f"👋 Welcome back, {existing_user.user.name}!\n\n"
+                f"Employee ID: {existing_user.user.empid}\n"
+                f"Role: {existing_user.user.role}\n\n"
+                f"Please choose an option below 👇",
+                reply_markup=get_main_menu(existing_user.user.role)
+            )
+            return
+
+        context.user_data.clear()
+        context.user_data["waiting_for_company"] = True
+        await update.message.reply_text("Please enter your Company Code:")
+        return
+
+    if text_lower == "cancel":
+        context.user_data.clear()
+        tg_user = await get_telegram_user(chat_id)
+        await update.message.reply_text(
+            "Cancelled.",
+            reply_markup=get_main_menu(tg_user.user.role) if tg_user else None
+        )
+        return
+
+    if context.user_data.get("waiting_for_company"):
+        context.user_data["company_id"] = text
+        context.user_data["waiting_for_company"] = False
+        context.user_data["waiting_for_empid"] = True
+        await update.message.reply_text("Please enter your Employee ID:")
+        return
+
+    if context.user_data.get("waiting_for_empid"):
+        company_id = context.user_data.get("company_id")
+        empid = text
+
+        await update.message.reply_text("Checking your details...")
+
+        try:
+            user = await get_verified_user(empid, company_id)
+
+            if user:
+                telegram_name = update.effective_user.username
+                await save_telegram_user(user, chat_id, telegram_name)
+
+                await update.message.reply_text(
+                    f"✅ Verification Successful!\n\n"
+                    f"Employee Name: {user.name}\n"
+                    f"Employee ID: {user.empid}\n"
+                    f"Company: {user.Company.name}\n"
+                    f"Role: {user.role}\n\n"
+                    f"From next time, you don't need to verify again.\n"
+                    f"Please choose an option below 👇",
+                    reply_markup=get_main_menu(user.role)
+                )
+            else:
+                await update.message.reply_text(
+                    "❌ Your Employee ID or Company Code is wrong.\n\n"
+                    "Please correct it and try again.\n"
+                    "If the issue continues, kindly contact Admin for reset."
+                )
+
+        except Exception as e:
+            logging.error(f"Database error: {e}")
+            await update.message.reply_text("⚠️ A system error occurred. Please try again later.")
+
+        finally:
+            context.user_data.clear()
+
+        return
+
+    if context.user_data.get("applying_leave"):
+        step = context.user_data.get("leave_step")
+
+        if step == "from_date":
+            context.user_data["from_date"] = text
+            context.user_data["leave_step"] = "to_date"
+            await update.message.reply_text("Enter To Date in YYYY-MM-DD format:")
+            return
+
+        if step == "to_date":
+            context.user_data["to_date"] = text
+            context.user_data["leave_step"] = "leave_type"
+            await update.message.reply_text(
+                "Choose Leave Type 👇",
+                reply_markup=get_leave_type_menu()
+            )
+            return
+
+        if step == "leave_type":
+            valid_types = ["sick", "casual", "paid", "compensation"]
+
+            if text_lower not in valid_types:
+                await update.message.reply_text(
+                    "❌ Please choose a valid leave type.",
+                    reply_markup=get_leave_type_menu()
+                )
+                return
+
+            context.user_data["leave_type"] = text.title()
+            context.user_data["leave_step"] = "reason"
+            await update.message.reply_text("Enter reason for leave:")
+            return
+
+        if step == "reason":
+            tg_user = await get_telegram_user(chat_id)
+
+            if not tg_user:
+                await update.message.reply_text("❌ Please verify first using /start")
+                context.user_data.clear()
+                return
+
+            try:
+                from_date = datetime.strptime(context.user_data["from_date"], "%Y-%m-%d").date()
+                to_date = datetime.strptime(context.user_data["to_date"], "%Y-%m-%d").date()
+
+                if to_date < from_date:
+                    await update.message.reply_text(
+                        "❌ To Date cannot be before From Date. Please start again."
+                    )
+                    context.user_data.clear()
+                    return
+
+                await save_leave_application(
+                    tg_user.user,
+                    from_date,
+                    to_date,
+                    context.user_data["leave_type"],
+                    text
+                )
+
+                approvers = await get_approver_chat_ids(tg_user.user.role)
+
+                notification_message = (
+                    f"📢 New Leave Request\n\n"
+                    f"Employee: {tg_user.user.name}\n"
+                    f"Role: {tg_user.user.role}\n"
+                    f"From: {from_date}\n"
+                    f"To: {to_date}\n"
+                    f"Type: {context.user_data['leave_type']}\n"
+                    f"Reason: {text}"
+                )
+
+                for approver in approvers:
+                    if approver.chat_id:
+                        await context.bot.send_message(
+                            chat_id=approver.chat_id,
+                            text=notification_message
+                        )
+
+                await update.message.reply_text(
+                    "✅ Leave Application Submitted Successfully!\n\n"
+                    "Status: Pending Approval",
+                    reply_markup=get_main_menu(tg_user.user.role)
+                )
+
+            except ValueError:
+                await update.message.reply_text(
+                    "❌ Invalid date format. Please start again and use YYYY-MM-DD."
+                )
+
+            context.user_data.clear()
+            return
+
+    tg_user = await get_telegram_user(chat_id)
+
+    if text_lower in ["salary", "/salary"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+        await salary_details(update, tg_user)
+        return
+
+    if text_lower in ["leave", "/leave"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+        await leave_details(update, tg_user)
+        return
+
+    if text_lower in ["attendance", "/attendance"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+        await attendance_details(update, tg_user)
+        return
+
+    if text_lower in ["attendance login", "login", "/login"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+        await attendance_login(update, tg_user)
+        return
+
+    if text_lower in ["apply leave", "/applyleave"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+
+        if tg_user.user.role.lower() == "admin":
+            await update.message.reply_text("❌ Admin cannot apply leave.")
+            return
+
+        context.user_data.clear()
+        context.user_data["applying_leave"] = True
+        context.user_data["leave_step"] = "from_date"
+
+        await update.message.reply_text("📝 Apply Leave\n\nEnter From Date in YYYY-MM-DD format:")
+        return
+
+    if text_lower in ["pending leaves", "/pendingleaves"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+
+        if tg_user.user.role.lower() not in ["manager", "admin"]:
+            await update.message.reply_text("❌ Only Manager/Admin can view pending leaves.")
+            return
+
+        await show_pending_leave(update, context, tg_user)
+        return
+
+    if text_lower in ["approve", "approve leave", "/approveleave"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+
+        if tg_user.user.role.lower() not in ["manager", "admin"]:
+            await update.message.reply_text("❌ Only Manager/Admin can approve leaves.")
+            return
+
+        leave_id = context.user_data.get("selected_leave_id")
+
+        if not leave_id:
+            leave = await get_next_pending_leave_for_approver(tg_user.user)
+
+            if not leave:
+                await update.message.reply_text("✅ No pending leave requests.")
+                return
+
+            leave_id = leave.id
+
+        result = await approve_leave_request(leave_id, tg_user.user)
+
+        await update.message.reply_text(
+            result["message"],
+            reply_markup=get_main_menu(tg_user.user.role)
+        )
+
+        if result.get("success") and result.get("employee_chat_id"):
+            await context.bot.send_message(
+                chat_id=result["employee_chat_id"],
+                text=result["employee_message"]
+            )
+
+        context.user_data.pop("selected_leave_id", None)
+        return
+
+    if text_lower in ["reject", "reject leave", "/rejectleave"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+
+        if tg_user.user.role.lower() not in ["manager", "admin"]:
+            await update.message.reply_text("❌ Only Manager/Admin can reject leaves.")
+            return
+
+        leave_id = context.user_data.get("selected_leave_id")
+
+        if not leave_id:
+            leave = await get_next_pending_leave_for_approver(tg_user.user)
+
+            if not leave:
+                await update.message.reply_text("✅ No pending leave requests.")
+                return
+
+            leave_id = leave.id
+
+        result = await reject_leave_request(leave_id, tg_user.user)
+
+        await update.message.reply_text(
+            result["message"],
+            reply_markup=get_main_menu(tg_user.user.role)
+        )
+
+        if result.get("success") and result.get("employee_chat_id"):
+            await context.bot.send_message(
+                chat_id=result["employee_chat_id"],
+                text=result["employee_message"]
+            )
+
+        context.user_data.pop("selected_leave_id", None)
+        return
+
+    await update.message.reply_text(
+        "Please choose a valid option from the menu.",
+        reply_markup=get_main_menu(tg_user.user.role) if tg_user else None
+    )
+
+
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+    print("✅ HRMS Telegram Bot Started...")
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()

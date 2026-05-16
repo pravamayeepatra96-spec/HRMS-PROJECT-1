@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Leave Policies{% endblock %}
+
+{% block header_title %}Employee Leave Policies{% endblock %}
+
+{% block content %}
+            <div class="table-container">
+                <table class="employee-table">
+                    <thead>
+                        <tr>
+                            <th>Emp ID</th>
+                            <th>Name</th>
+                            <th>Role</th>
+                            <th>Paid Leave</th>
+                            <th>Casual Leave</th>
+                            <th>Sick Leave</th>
+                            <th>Comp Leave</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in employee_policies %}
+                        <tr>
+                            <td>{{ item.employee.empid }}</td>
+                            <td>{{ item.employee.name }}</td>
+                            <td><span class="role-badge role-{{ item.employee.role|lower|cut:' ' }}">{{ item.employee.role }}</span></td>
+                            <td>{{ item.policy.paid_leave|default:"0" }}</td>
+                            <td>{{ item.policy.casual_leave|default:"0" }}</td>
+                            <td>{{ item.policy.sick_leave|default:"0" }}</td>
+                            <td>{{ item.policy.compensation_leave|default:"0" }}</td>
+                            <td><button type="button" class="btn btn-edit edit-btn" data-action="{% url 'update_leave_policy' item.employee.id %}" data-paid="{{ item.policy.paid_leave|default:0 }}" data-casual="{{ item.policy.casual_leave|default:0 }}" data-sick="{{ item.policy.sick_leave|default:0 }}" data-comp="{{ item.policy.compensation_leave|default:0 }}">Edit</button></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8">No employees found.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+<!-- Edit Modal -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Edit Leave Policy</h3>
+            <span class="close">&times;</span>
+        </div>
+        <form id="editForm" method="post" class="modal-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="paid_leave">Paid Leave</label>
+                <input type="number" id="paid_leave" name="paid_leave" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="casual_leave">Casual Leave</label>
+                <input type="number" id="casual_leave" name="casual_leave" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="sick_leave">Sick Leave</label>
+                <input type="number" id="sick_leave" name="sick_leave" min="0" required>
+            </div>
+            <div class="form-group">
+                <label for="compensation_leave">Comp Leave</label>
+                <input type="number" id="compensation_leave" name="compensation_leave" min="0" required>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    var modal = document.getElementById('editModal');
+    var span = document.getElementsByClassName('close')[0];
+    var cancelBtn = document.getElementById('cancelEdit');
+    var editForm = document.getElementById('editForm');
+
+    span.onclick = function() {
+        modal.style.display = 'none';
+    }
+
+    cancelBtn.onclick = function() {
+        modal.style.display = 'none';
+    }
+
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.onclick = function() {
+            editForm.action = this.getAttribute('data-action');
+            document.getElementById('paid_leave').value = this.getAttribute('data-paid');
+            document.getElementById('casual_leave').value = this.getAttribute('data-casual');
+            document.getElementById('sick_leave').value = this.getAttribute('data-sick');
+            document.getElementById('compensation_leave').value = this.getAttribute('data-comp');
+            modal.style.display = 'block';
+        }
+    });
+</script>
+{% endblock %}

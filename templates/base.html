@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HRMS{% endblock %}</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-left">
+                <h1>{% block header_title %}{{ company_name }} - Employee Management{% endblock %}</h1>
+            </div>
+            <div class="header-right">
+                {% if user_name %}
+                <span>Welcome, {{ user_name }} ({{ user_role }})</span>
+                {% endif %}
+                <a href="{% url 'logout' %}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+        </header>
+
+        <!-- Navigation Bar -->
+        <nav class="dashboard-nav">
+            <a href="{% url 'dashboard' %}" class="nav-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            <a href="{% url 'leave_policy' %}" class="nav-link{% if 'leave' in request.path %} active{% endif %}">
+                <i class="fas fa-calendar-alt"></i> Leave Policies
+            </a>
+            <a href="{% url 'salary_list' %}" class="nav-link{% if 'salary' in request.path %} active{% endif %}">
+                <i class="fas fa-money-bill-wave"></i> Salary
+            </a>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Message Notification -->
+    <div id="message" class="message" style="display: none;"></div>
+
+    <!-- Default Scripts -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

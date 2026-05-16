@@ -1,0 +1,2 @@
+telebot.py- class Meta:
+    db_table = 'telebot_telegram_details'

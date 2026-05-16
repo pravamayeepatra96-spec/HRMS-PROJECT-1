@@ -1,0 +1,29 @@
+Project Plan
+Day 1: Database Setup, Bot Integration, and Table Creation
+Set up the database environment
+Create and set up the bot
+Generate and configure bot connection link for system integration
+
+Create all required database tables, including:
+User Table (user id, name, email id, password, role)
+Company Table(Company id, company name)
+Leave Table(Paid leave, Casual leave, Sick leave, Compensation leave)
+Salary Table (Id, Company Id, Monthly Salary)
+Attendance (Check-in / Check-out) Table (Log in time, Log out time, Status)
+
+
+Day 2: Bot Integration & Leave Module
+Integrate bot with the system
+Implement leave application functionality
+Connect leave module with database and bot
+
+
+Day 3: Salary Module
+Implement salary-related functionalities
+Ensure salary data is properly stored and retrieved
+Link salary module with user data
+
+Day 4: Attendance & Bot Integration
+Implement check-in and check-out functionality
+Integrate the attendance module with bot
+ Test to ensure all the modules are functioning as expected

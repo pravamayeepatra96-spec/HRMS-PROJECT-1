@@ -1,0 +1,111 @@
+import os
+import django
+import logging
+
+from asgiref.sync import sync_to_async
+
+from telegram import Update
+from telegram.ext import (
+    ApplicationBuilder,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
+
+# 1. Setup Django environment
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hrms.settings")
+django.setup()
+
+from user.models import User
+
+logging.basicConfig(level=logging.INFO)
+
+# ⚠️ REMINDER: Use the new token from @BotFather here!
+TOKEN = "8619738165:AAElNNoC4bYuKP1qDN0r0BMVqn7JL3QQxu8"
+
+@sync_to_async
+def get_verified_user(empid, company_id):
+    """
+    Fetches the user and their related Company in one go.
+    .select_related('Company') is the key fix for your error.
+    """
+    return User.objects.select_related('Company').filter(
+        empid=empid,
+        Company__code=company_id,
+        status=1
+    ).first()
+
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.message or not update.message.text:
+        return
+
+    text = update.message.text.strip()
+
+    # Initial Greeting / Reset
+    if text.lower() in ["hi", "hello", "start", "/start"]:
+        context.user_data.clear()
+        context.user_data["waiting_for_company"] = True
+        await update.message.reply_text("Please enter your Company Code:")
+        return
+
+    # State 1: Receiving Company Code
+    if context.user_data.get("waiting_for_company"):
+        context.user_data["company_id"] = text
+        context.user_data["waiting_for_company"] = False
+        context.user_data["waiting_for_empid"] = True
+        await update.message.reply_text("Please enter your Employee ID:")
+        return
+
+    # State 2: Receiving Emp ID and Verifying
+    if context.user_data.get("waiting_for_empid"):
+        company_id = context.user_data.get("company_id")
+        empid = text
+
+        await update.message.reply_text("Checking your details...")
+
+        try:
+            # This call is now safe because select_related handles the 'Company' join
+            user = await get_verified_user(empid, company_id)
+
+            if user:
+                # user.Company.name and user.role are now accessible safely
+                await update.message.reply_text(
+                    f"✅ Verification Successful!\n\n"
+                    f"Employee Name: {user.name}\n"
+                    f"Employee ID: {user.empid}\n"
+                    f"Company: {user.Company.name}\n"
+                    f"Role: {user.role}"
+                )
+            else:
+                await update.message.reply_text(
+                    "❌ Company Code or Employee ID does not match."
+                )
+        except Exception as e:
+            logging.error(f"Database error: {e}")
+            await update.message.reply_text("⚠️ A system error occurred. Please try again later.")
+        finally:
+            context.user_data.clear()
+        return
+
+    # Fallback/Default state
+    context.user_data.clear()
+    context.user_data["waiting_for_company"] = True
+    await update.message.reply_text("Please enter your Company Code:")
+
+
+def main():
+    # Application setup
+    app = ApplicationBuilder().token(TOKEN).build()
+
+    # Add handler for text messages
+    app.add_handler(
+        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
+    )
+
+    print("✅ HRMS Telegram Bot Started...")
+    app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
