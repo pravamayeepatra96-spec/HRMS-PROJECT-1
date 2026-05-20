@@ -1,52 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}HRMS{% endblock %}</title>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=21">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     {% block extra_css %}{% endblock %}
 </head>
+
 <body>
-    <div class="dashboard-container">
-        <!-- Header -->
-        <header class="dashboard-header">
-            <div class="header-left">
-                <h1>{% block header_title %}{{ company_name }} - Employee Management{% endblock %}</h1>
-            </div>
-            <div class="header-right">
-                {% if user_name %}
+
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="header-left">
+            <h1>{% block header_title %}{{ company_name }} - Employee Management{% endblock %}</h1>
+        </div>
+
+        <div class="header-right">
+            {% if user_name %}
                 <span>Welcome, {{ user_name }} ({{ user_role }})</span>
-                {% endif %}
-                <a href="{% url 'logout' %}" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            {% endif %}
+
+            <a href="{% url 'logout' %}" class="logout-btn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <h2>HRMS</h2>
+            <p>Admin Panel</p>
+        </div>
+
+        <nav class="sidebar-nav">
+
+            <!-- MAIN -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Main</p>
+
+                <a href="{% url 'dashboard' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
             </div>
-        </header>
 
-        <!-- Navigation Bar -->
-        <nav class="dashboard-nav">
-            <a href="{% url 'dashboard' %}" class="nav-link{% if request.resolver_match.url_name == 'dashboard' %} active{% endif %}">
-                <i class="fas fa-home"></i> Dashboard
-            </a>
-            <a href="{% url 'leave_policy' %}" class="nav-link{% if 'leave' in request.path %} active{% endif %}">
-                <i class="fas fa-calendar-alt"></i> Leave Policies
-            </a>
-            <a href="{% url 'salary_list' %}" class="nav-link{% if 'salary' in request.path %} active{% endif %}">
-                <i class="fas fa-money-bill-wave"></i> Salary
-            </a>
+            <!-- EMPLOYEE MANAGEMENT -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Employee Management</p>
+
+                <a href="{% url 'employee_list' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'employee_list' %} active{% endif %}">
+                    <i class="fas fa-users"></i>
+                    <span>All Employees</span>
+                </a>
+
+                <a href="{% url 'employee_list' %}" class="sidebar-link">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Add Employee</span>
+                </a>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-id-card"></i>
+                    <span>Profile Details</span>
+                </a>
+            </div>
+
+            <!-- ATTENDANCE MANAGEMENT -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Attendance Management</p>
+
+                <a href="{% url 'attendance_list' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'attendance_list' %} active{% endif %}">
+                    <i class="fas fa-user-check"></i>
+                    <span>Attendance Records</span>
+                </a>
+
+                <a href="{% url 'mark_attendance' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'mark_attendance' %} active{% endif %}">
+                    <i class="fas fa-clock"></i>
+                    <span>Mark Attendance</span>
+                </a>
+            </div>
+
+            <!-- LEAVE MANAGEMENT -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Leave Management</p>
+
+                <a href="{% url 'leave_policy' %}"
+                   class="sidebar-link{% if 'leave' in request.path %} active{% endif %}">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>Leave Policies</span>
+                </a>
+            </div>
+
+            <!-- SALARY MANAGEMENT -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Salary Management</p>
+
+                <a href="{% url 'salary_list' %}"
+                   class="sidebar-link{% if 'salary' in request.path %} active{% endif %}">
+                    <i class="fas fa-money-bill-wave"></i>
+                    <span>Salary Records</span>
+                </a>
+            </div>
+
+            <!-- RECRUITMENT MANAGEMENT -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Recruitment Management</p>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Applicants</span>
+                </a>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-briefcase"></i>
+                    <span>Job Openings</span>
+                </a>
+            </div>
+
+            <!-- DOCUMENT MANAGEMENT -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Document Management</p>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Employee Documents</span>
+                </a>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-upload"></i>
+                    <span>Upload Documents</span>
+                </a>
+            </div>
+
+            <!-- FEEDBACK / QUERY MANAGEMENT -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Feedback / Query</p>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-question-circle"></i>
+                    <span>Queries</span>
+                </a>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Feedback</span>
+                </a>
+            </div>
+
+            <!-- HR ANALYSIS & REPORTING -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">HR Analysis & Reports</p>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Employee Reports</span>
+                </a>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Attendance Reports</span>
+                </a>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Salary Reports</span>
+                </a>
+            </div>
+
+            <!-- ACCOUNT -->
+            <div class="sidebar-section">
+                <p class="sidebar-section-title">Account</p>
+
+                <a href="#" class="sidebar-link">
+                    <i class="fas fa-key"></i>
+                    <span>Password Reset</span>
+                </a>
+
+                <a href="{% url 'logout' %}" class="sidebar-link">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+            </div>
+
         </nav>
+    </aside>
 
-        <!-- Main Content -->
-        <main class="dashboard-main">
-            {% block content %}{% endblock %}
-        </main>
-    </div>
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        {% block content %}{% endblock %}
+    </main>
 
     <!-- Message Notification -->
     <div id="message" class="message" style="display: none;"></div>
 
-    <!-- Default Scripts -->
     {% block extra_js %}{% endblock %}
+
 </body>
 </html>

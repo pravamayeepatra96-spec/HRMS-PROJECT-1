@@ -13,5 +13,5 @@ urlpatterns = [
 
     # path('', include('telegram.urls')),
 
-    # path('', include('attendance.urls')),
+    path('', include('attendance.urls')),
 ]

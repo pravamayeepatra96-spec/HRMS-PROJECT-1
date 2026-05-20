@@ -1,55 +1,49 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from datetime import date, datetime
 
 from .models import Attendance
 
-from datetime import date, datetime
-
 
 def attendance_list(request):
-
-    attendances = Attendance.objects.all()
+    attendances = Attendance.objects.all().order_by('-date', '-id')
 
     return render(
         request,
         'attendance_list.html',
-        {'attendances': attendances}
+        {
+            'attendances': attendances
+        }
     )
 
 
 def attendance_details(request, id):
-
-    attendance = Attendance.objects.get(id=id)
+    attendance = get_object_or_404(Attendance, id=id)
 
     return render(
         request,
         'attendance_details.html',
-        {'attendance': attendance}
+        {
+            'attendance': attendance
+        }
     )
 
 
 def mark_attendance(request):
-
     if request.method == "POST":
-
         empid = request.POST.get('empid')
 
-        Attendance.objects.create(
+        if empid:
+            Attendance.objects.create(
+                empid=empid,
+                date=date.today(),
+                log_in_time=datetime.now().time(),
+                log_out_time=datetime.now().time(),
+                status=1
+            )
 
-            empid=empid,
-
-            date=date.today(),
-
-            log_in_time=datetime.now().time(),
-
-            log_out_time=datetime.now().time(),
-
-            status=1
-        )
-
-        return redirect('/attendance-list/')
+        return redirect('attendance_list')
 
     return render(
         request,
         'mark_attendance.html'
     )
-# Create your views here.
