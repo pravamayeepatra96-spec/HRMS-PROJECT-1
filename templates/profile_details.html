@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Profile Details - {{ company_name }}{% endblock %}
+
+{% block header_title %}{{ company_name }} - Profile Details{% endblock %}
+
+{% block content %}
+
+<div class="profile-page">
+
+    <div class="profile-card">
+
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+
+            <div class="profile-heading">
+                <h2>{{ profile_user.name }}</h2>
+                <p>{{ profile_user.role }}</p>
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <h3>Employee Information</h3>
+
+            <div class="profile-grid">
+
+                <div class="profile-item">
+                    <span>Employee ID</span>
+                    <strong>{{ profile_user.empid }}</strong>
+                </div>
+
+                <div class="profile-item">
+                    <span>Full Name</span>
+                    <strong>{{ profile_user.name }}</strong>
+                </div>
+
+                <div class="profile-item">
+                    <span>Email</span>
+                    <strong>{{ profile_user.email }}</strong>
+                </div>
+
+                <div class="profile-item">
+                    <span>Phone Number</span>
+                    <strong>{{ profile_user.phone_no }}</strong>
+                </div>
+
+                <div class="profile-item">
+                    <span>Role</span>
+                    <strong>{{ profile_user.role }}</strong>
+                </div>
+
+                <div class="profile-item">
+                    <span>Joining Date</span>
+                    <strong>{{ profile_user.joining_date|date:"M d, Y" }}</strong>
+                </div>
+
+                <div class="profile-item">
+                    <span>Status</span>
+                    {% if profile_user.status == 1 %}
+                        <strong class="status-active">Active</strong>
+                    {% else %}
+                        <strong class="status-inactive">Inactive</strong>
+                    {% endif %}
+                </div>
+
+            </div>
+        </div>
+
+        <div class="profile-section">
+            <h3>Company Information</h3>
+
+            <div class="profile-grid">
+
+                <div class="profile-item">
+                    <span>Company Name</span>
+                    <strong>{{ company.name }}</strong>
+                </div>
+
+                <div class="profile-item">
+                    <span>Company Code</span>
+                    <strong>{{ company.code }}</strong>
+                </div>
+
+                <div class="profile-item">
+                    <span>Owner ID</span>
+                    <strong>{{ company.owner_id }}</strong>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back to Dashboard
+            </a>
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+    .profile-page {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+
+    .profile-card {
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 30px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid #e5e7eb;
+        margin-bottom: 25px;
+    }
+
+    .profile-avatar {
+        width: 75px;
+        height: 75px;
+        border-radius: 50%;
+        background: #667eea;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 34px;
+    }
+
+    .profile-heading h2 {
+        margin: 0 0 6px;
+        font-size: 26px;
+        color: #111827;
+    }
+
+    .profile-heading p {
+        margin: 0;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .profile-section {
+        margin-top: 25px;
+    }
+
+    .profile-section h3 {
+        font-size: 20px;
+        color: #1f2937;
+        margin-bottom: 18px;
+    }
+
+    .profile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+    }
+
+    .profile-item {
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+    }
+
+    .profile-item span {
+        display: block;
+        font-size: 13px;
+        color: #6b7280;
+        margin-bottom: 7px;
+        font-weight: 600;
+    }
+
+    .profile-item strong {
+        font-size: 16px;
+        color: #111827;
+        font-weight: 700;
+        word-break: break-word;
+    }
+
+    .status-active {
+        color: #166534 !important;
+    }
+
+    .status-inactive {
+        color: #991b1b !important;
+    }
+
+    .profile-actions {
+        margin-top: 28px;
+        display: flex;
+        gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .profile-header {
+            flex-direction: column;
+            text-align: center;
+        }
+    }
+</style>
+
+{% endblock %}

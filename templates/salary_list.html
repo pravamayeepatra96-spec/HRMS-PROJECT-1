@@ -6,110 +6,505 @@
 {% block header_title %}Salary Management{% endblock %}
 
 {% block content %}
-<div class="actions-bar">
-    <button type="button" class="btn btn-primary" id="addSalaryBtn">Add Salary</button>
-</div>
 
-<div class="table-container">
-    <table class="employee-table">
-        <thead>
-            <tr>
-                <th>Emp ID</th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Basic Salary</th>
-                <th>Bonuses</th>
-                <th>Deductions</th>
-                <th>Net Salary</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for salary in salaries %}
-            <tr>
-                <td>{{ salary.empid|default:salary.user.empid }}</td>
-                <td>{{ salary.user.name|default:'Unknown' }}</td>
-                <td>{{ salary.role|default:salary.user.role }}</td>
-                <td>{{ salary.basic_salary }}</td>
-                <td>{{ salary.bonuses }}</td>
-                <td>{{ salary.deductions }}</td>
-                <td>{{ salary.net_salary }}</td>
-                <td class="actions">
-                    <button type="button" class="btn btn-edit edit-btn"
-                            data-action="{% url 'salary_update' salary.id %}"
-                            data-user-id="{{ salary.user.id }}"
-                            data-role="{{ salary.role|default:salary.user.role }}"
-                            data-basic="{{ salary.basic_salary }}"
-                            data-bonuses="{{ salary.bonuses }}"
-                            data-deductions="{{ salary.deductions }}"
-                            data-net="{{ salary.net_salary }}">
-                        Edit
-                    </button>
-                    <form method="post" action="{% url 'salary_delete' salary.id %}" style="display:inline; margin-left:0.5rem;">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-delete" onclick="return confirm('Delete this salary record?');">
-                            Delete
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="8">No salary records found.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="salary-page">
+
+    <div class="salary-top">
+        <div>
+            <h2>Salary Management</h2>
+            <p>View, add, update, and delete employee salary records.</p>
+        </div>
+
+        <button type="button" class="salary-add-btn" id="addSalaryBtn">
+            <i class="fas fa-plus"></i>
+            Add Salary
+        </button>
+    </div>
+
+    <div class="salary-table-card">
+        <table class="salary-table">
+            <thead>
+                <tr>
+                    <th>Emp ID</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Basic Salary</th>
+                    <th>Bonuses</th>
+                    <th>Deductions</th>
+                    <th>Net Salary</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for salary in salaries %}
+                <tr>
+                    <td>{{ salary.empid|default:salary.user.empid }}</td>
+                    <td>{{ salary.user.name|default:'Unknown' }}</td>
+
+                    <td>
+                        <span class="salary-role-badge role-{{ salary.role|default:salary.user.role|lower|cut:' ' }}">
+                            {{ salary.role|default:salary.user.role }}
+                        </span>
+                    </td>
+
+                    <td>₹ {{ salary.basic_salary }}</td>
+                    <td>₹ {{ salary.bonuses }}</td>
+                    <td>₹ {{ salary.deductions }}</td>
+
+                    <td>
+                        <span class="net-salary-badge">
+                            ₹ {{ salary.net_salary }}
+                        </span>
+                    </td>
+
+                    <td>
+                        <div class="salary-actions">
+                            <button type="button" class="salary-edit-btn edit-btn"
+                                    data-action="{% url 'salary_update' salary.id %}"
+                                    data-user-id="{{ salary.user.id }}"
+                                    data-role="{{ salary.role|default:salary.user.role }}"
+                                    data-basic="{{ salary.basic_salary }}"
+                                    data-bonuses="{{ salary.bonuses }}"
+                                    data-deductions="{{ salary.deductions }}"
+                                    data-net="{{ salary.net_salary }}">
+                                <i class="fas fa-edit"></i>
+                                Edit
+                            </button>
+
+                            <form method="post" action="{% url 'salary_delete' salary.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="salary-delete-btn"
+                                        onclick="return confirm('Delete this salary record?');">
+                                    <i class="fas fa-trash"></i>
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="salary-empty-message">
+                        No salary records found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
 <!-- Salary Modal -->
-<div id="salaryModal" class="modal">
-    <div class="modal-content" style="max-height: 85vh; overflow: hidden;">
-        <div class="modal-header">
-            <h3 id="modalTitle">Add Salary</h3>
-            <span class="close">&times;</span>
+<div id="salaryModal" class="salary-modal">
+    <div class="salary-modal-box">
+
+        <div class="salary-modal-header">
+            <div>
+                <h3 id="modalTitle">Add Salary</h3>
+                <p>Fill employee salary details below.</p>
+            </div>
+
+            <button type="button" class="salary-modal-close close">
+                &times;
+            </button>
         </div>
-        <form id="salaryForm" method="post" action="{% url 'salary_create' %}" class="modal-form">
+
+        <form id="salaryForm" method="post" action="{% url 'salary_create' %}" class="salary-modal-form">
             {% csrf_token %}
-            <div class="form-group">
-                <label for="user_id">Employee</label>
-                <select id="user_id" name="user_id" required>
-                    <option value="">Select employee</option>
-                    {% for user in users %}
-                    <option value="{{ user.id }}" data-role="{{ user.role }}">{{ user.name }} - {{ user.role }}</option>
-                    {% endfor %}
-                </select>
+
+            <div class="salary-form-grid">
+
+                <div class="salary-form-group salary-form-full">
+                    <label for="user_id">Employee</label>
+                    <select id="user_id" name="user_id" required>
+                        <option value="">Select employee</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}" data-role="{{ user.role }}">
+                            {{ user.name }} - {{ user.role }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="salary-form-group">
+                    <label for="role">Role</label>
+                    <input type="text" id="role" name="role" readonly>
+                </div>
+
+                <div class="salary-form-group">
+                    <label for="basic_salary">Basic Salary</label>
+                    <input type="number" step="0.01" id="basic_salary" name="basic_salary" min="0" required>
+                </div>
+
+                <div class="salary-form-group">
+                    <label for="bonuses">Bonuses</label>
+                    <input type="number" step="0.01" id="bonuses" name="bonuses" min="0" value="0">
+                </div>
+
+                <div class="salary-form-group">
+                    <label for="deductions">Deductions</label>
+                    <input type="number" step="0.01" id="deductions" name="deductions" min="0" value="0">
+                </div>
+
+                <div class="salary-form-group salary-form-full">
+                    <label for="net_salary">Net Salary</label>
+                    <input type="number" step="0.01" id="net_salary" name="net_salary" readonly>
+                </div>
+
             </div>
-            <div class="form-group">
-                <label for="role">Role</label>
-                <input type="text" id="role" name="role" readonly>
-            </div>
-            <div class="form-group">
-                <label for="basic_salary">Basic Salary</label>
-                <input type="number" step="0.01" id="basic_salary" name="basic_salary" min="0" required>
-            </div>
-            <div class="form-group">
-                <label for="bonuses">Bonuses</label>
-                <input type="number" step="0.01" id="bonuses" name="bonuses" min="0" value="0">
-            </div>
-            <div class="form-group">
-                <label for="deductions">Deductions</label>
-                <input type="number" step="0.01" id="deductions" name="deductions" min="0" value="0">
-            </div>
-            <div class="form-group">
-                <label for="net_salary">Net Salary</label>
-                <input type="number" step="0.01" id="net_salary" name="net_salary" readonly>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="cancelSalary">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
+
+            <div class="salary-modal-actions">
+                <button type="button" class="salary-cancel-btn" id="cancelSalary">
+                    Cancel
+                </button>
+
+                <button type="submit" class="salary-save-btn">
+                    Save
+                </button>
             </div>
         </form>
+
     </div>
 </div>
+
+<style>
+    .salary-page {
+        width: 100%;
+    }
+
+    .salary-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 28px;
+        gap: 20px;
+    }
+
+    .salary-top h2 {
+        font-size: 24px;
+        color: #111827;
+        margin-bottom: 6px;
+    }
+
+    .salary-top p {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .salary-add-btn {
+        border: none;
+        background: #4f46e5;
+        color: #ffffff;
+        padding: 14px 22px;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+
+    .salary-add-btn:hover {
+        background: #4338ca;
+    }
+
+    .salary-table-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .salary-table {
+        width: 100%;
+        min-width: 1150px;
+        border-collapse: collapse;
+    }
+
+    .salary-table thead {
+        background: #f9fafb;
+    }
+
+    .salary-table th {
+        padding: 16px 18px;
+        text-align: left;
+        color: #374151;
+        font-size: 15px;
+        font-weight: 700;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .salary-table td {
+        padding: 15px 18px;
+        color: #111827;
+        font-size: 15px;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .salary-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .salary-role-badge {
+        background: #eef2ff;
+        color: #3730a3;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-block;
+    }
+
+    .net-salary-badge {
+        background: #dcfce7;
+        color: #166534;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 700;
+        display: inline-block;
+    }
+
+    .salary-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .salary-actions form {
+        margin: 0;
+    }
+
+    .salary-edit-btn,
+    .salary-delete-btn {
+        border: none;
+        outline: none;
+        color: #ffffff;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .salary-edit-btn {
+        background: #16a34a;
+    }
+
+    .salary-edit-btn:hover {
+        background: #15803d;
+    }
+
+    .salary-delete-btn {
+        background: #dc2626;
+    }
+
+    .salary-delete-btn:hover {
+        background: #b91c1c;
+    }
+
+    .salary-empty-message {
+        text-align: center;
+        padding: 25px;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .salary-modal {
+        display: none;
+        position: fixed;
+        z-index: 6000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(17, 24, 39, 0.60);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .salary-modal-box {
+        background: #ffffff;
+        width: 95%;
+        max-width: 620px;
+        border-radius: 14px;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+        overflow: hidden;
+        animation: salaryModalFade 0.18s ease-in-out;
+    }
+
+    @keyframes salaryModalFade {
+        from {
+            transform: translateY(-10px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .salary-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .salary-modal-header h3 {
+        margin: 0 0 4px 0;
+        color: #111827;
+        font-size: 22px;
+    }
+
+    .salary-modal-header p {
+        margin: 0;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .salary-modal-close {
+        border: none;
+        background: transparent;
+        font-size: 30px;
+        line-height: 1;
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    .salary-modal-close:hover {
+        color: #111827;
+    }
+
+    .salary-modal-form {
+        margin: 0;
+    }
+
+    .salary-form-grid {
+        padding: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+    }
+
+    .salary-form-full {
+        grid-column: 1 / -1;
+    }
+
+    .salary-form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+
+    .salary-form-group input,
+    .salary-form-group select {
+        width: 100%;
+        height: 44px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 0 12px;
+        font-size: 14px;
+        outline: none;
+        background: #ffffff;
+    }
+
+    .salary-form-group input:focus,
+    .salary-form-group select:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .salary-form-group input[readonly] {
+        background: #f9fafb;
+        color: #374151;
+        cursor: not-allowed;
+    }
+
+    .salary-modal-actions {
+        padding: 18px 24px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        background: #f9fafb;
+    }
+
+    .salary-cancel-btn,
+    .salary-save-btn {
+        border: none;
+        padding: 12px 22px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    .salary-cancel-btn {
+        background: #6b7280;
+        color: #ffffff;
+    }
+
+    .salary-cancel-btn:hover {
+        background: #4b5563;
+    }
+
+    .salary-save-btn {
+        background: #4f46e5;
+        color: #ffffff;
+    }
+
+    .salary-save-btn:hover {
+        background: #4338ca;
+    }
+
+    @media (max-width: 768px) {
+        .salary-top {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .salary-add-btn {
+            justify-content: center;
+        }
+
+        .salary-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .salary-modal-actions {
+            flex-direction: column;
+        }
+
+        .salary-cancel-btn,
+        .salary-save-btn {
+            width: 100%;
+        }
+    }
+</style>
+
 {% endblock %}
 
 {% block extra_js %}
+
 <script>
     const salaryModal = document.getElementById('salaryModal');
     const modalTitle = document.getElementById('modalTitle');
@@ -129,7 +524,8 @@
         'Manager': 60000,
         'Team Lead': 50000,
         'HR': 45000,
-        'Intern': 15000
+        'Intern': 15000,
+        'Admin': 50000
     };
 
     function updateNet() {
@@ -140,7 +536,8 @@
     }
 
     function openSalaryModal(editMode = false) {
-        salaryModal.style.display = 'block';
+        salaryModal.style.display = 'flex';
+
         if (!editMode) {
             modalTitle.textContent = 'Add Salary';
             salaryForm.action = '{% url "salary_create" %}';
@@ -160,9 +557,11 @@
 
     function setRoleAndDefaultSalary(role) {
         roleInput.value = role;
-        if (!basicInput.value || basicInput.value === '0') {
+
+        if (!basicInput.value || basicInput.value === '0' || basicInput.value === '0.00') {
             basicInput.value = roleDefaults[role] || 0;
         }
+
         updateNet();
     }
 
@@ -171,7 +570,7 @@
     cancelSalary.onclick = closeModal;
 
     window.onclick = function(event) {
-        if (event.target == salaryModal) {
+        if (event.target === salaryModal) {
             closeModal();
         }
     }
@@ -198,8 +597,9 @@
             deductionsInput.value = this.dataset.deductions;
             netInput.value = this.dataset.net;
             updateNet();
-            salaryModal.style.display = 'block';
+            salaryModal.style.display = 'flex';
         };
     });
 </script>
+
 {% endblock %}

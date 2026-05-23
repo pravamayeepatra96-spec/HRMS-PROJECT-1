@@ -4,7 +4,7 @@ import logging
 from datetime import datetime
 
 from asgiref.sync import sync_to_async
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hrms.settings")
@@ -20,7 +20,7 @@ from salary.models import Salary
 logging.basicConfig(level=logging.INFO)
 
 TOKEN = "8619738165:AAElNNoC4bYuKP1qDN0r0BMVqn7JL3QQxu8"
-    
+
 
 @sync_to_async
 def get_verified_user(empid, company_id):
@@ -97,7 +97,31 @@ def mark_attendance_login(user):
             "status": 1,
         }
     )
+
     return attendance, created
+
+
+@sync_to_async
+def mark_attendance_logout(user):
+    today = timezone.localdate()
+    now_time = timezone.localtime().time()
+
+    attendance = Attendance.objects.filter(
+        empid=user.empid,
+        date=today,
+        status=1
+    ).first()
+
+    if not attendance:
+        return None, "no_login"
+
+    if attendance.log_out_time:
+        return attendance, "already_logged_out"
+
+    attendance.log_out_time = now_time
+    attendance.save()
+
+    return attendance, "logout_marked"
 
 
 @sync_to_async
@@ -264,6 +288,7 @@ def reject_leave_request(leave_id, approver):
 def get_main_menu(role=None):
     keyboard = [
         ["Attendance", "Attendance Login"],
+        ["Attendance Logout"],
         ["Salary", "Leave"],
     ]
 
@@ -272,6 +297,8 @@ def get_main_menu(role=None):
 
     if role and role.lower() in ["manager", "admin"]:
         keyboard.append(["Pending Leaves"])
+
+    keyboard.append(["Logout"])
 
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
 
@@ -289,7 +316,10 @@ def get_approval_menu():
     keyboard = [
         ["Approve", "Reject"],
         ["Pending Leaves"],
-        ["Attendance", "Salary", "Leave"],
+        ["Attendance", "Attendance Login"],
+        ["Attendance Logout"],
+        ["Salary", "Leave"],
+        ["Logout"]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True, one_time_keyboard=False)
 
@@ -378,6 +408,35 @@ async def attendance_login(update, tg_user):
         )
 
 
+async def attendance_logout(update, tg_user):
+    attendance, result = await mark_attendance_logout(tg_user.user)
+
+    if result == "no_login":
+        await update.message.reply_text(
+            "❌ You have not marked Attendance Login today.\n\n"
+            "Please mark Attendance Login first."
+        )
+        return
+
+    if result == "already_logged_out":
+        await update.message.reply_text(
+            f"⚠️ Attendance Logout already marked today.\n\n"
+            f"Employee ID: {attendance.empid}\n"
+            f"Date: {attendance.date}\n"
+            f"Login Time: {attendance.log_in_time}\n"
+            f"Logout Time: {attendance.log_out_time}"
+        )
+        return
+
+    await update.message.reply_text(
+        f"✅ Attendance Logout Marked\n\n"
+        f"Employee ID: {attendance.empid}\n"
+        f"Date: {attendance.date}\n"
+        f"Login Time: {attendance.log_in_time}\n"
+        f"Logout Time: {attendance.log_out_time}"
+    )
+
+
 async def show_pending_leave(update, context, tg_user):
     leave = await get_next_pending_leave_for_approver(tg_user.user)
 
@@ -428,6 +487,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data.clear()
         context.user_data["waiting_for_company"] = True
         await update.message.reply_text("Please enter your Company Code:")
+        return
+
+    if text_lower in ["logout", "/logout"]:
+        context.user_data.clear()
+
+        await update.message.reply_text(
+            "✅ You have been logged out from the Telegram menu.\n\n"
+            "Your verification is still saved.\n"
+            "Type Hi or /start anytime to open your HRMS menu again.",
+            reply_markup=ReplyKeyboardRemove()
+        )
         return
 
     if text_lower == "cancel":
@@ -608,6 +678,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await attendance_login(update, tg_user)
         return
 
+    if text_lower in ["attendance logout", "logout attendance", "/logoutattendance"]:
+        if not tg_user:
+            await update.message.reply_text("❌ Please verify first using /start")
+            return
+        await attendance_logout(update, tg_user)
+        return
+
     if text_lower in ["apply leave", "/applyleave"]:
         if not tg_user:
             await update.message.reply_text("❌ Please verify first using /start")
@@ -717,7 +794,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
 
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_handler(MessageHandler(filters.TEXT, handle_message))
 
     print("✅ HRMS Telegram Bot Started...")
     app.run_polling()

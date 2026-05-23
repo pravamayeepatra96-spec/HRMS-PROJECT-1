@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}HRMS{% endblock %}</title>
 
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=21">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=100">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     {% block extra_css %}{% endblock %}
@@ -22,12 +22,38 @@
 
         <div class="header-right">
             {% if user_name %}
-                <span>Welcome, {{ user_name }} ({{ user_role }})</span>
-            {% endif %}
+            <div class="profile-menu">
 
-            <a href="{% url 'logout' %}" class="logout-btn">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
+                <button class="profile-menu-btn" type="button" onclick="toggleProfileMenu(event)">
+                    <i class="fas fa-user-circle"></i>
+                    <span>{{ user_name }} ({{ user_role }})</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+
+                <div class="profile-menu-dropdown" id="profileDropdown">
+                    <a href="{% url 'profile_details' %}">
+                        <i class="fas fa-id-card"></i>
+                        <span>My Profile</span>
+                    </a>
+
+                    <a href="#">
+                        <i class="fas fa-user-cog"></i>
+                        <span>Personal Settings</span>
+                    </a>
+
+                    <a href="{% url 'documents_list' %}">
+                        <i class="fas fa-folder-open"></i>
+                        <span>My Documents</span>
+                    </a>
+
+                    <a href="{% url 'logout' %}" class="logout-dropdown-link">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+
+            </div>
+            {% endif %}
         </div>
     </header>
 
@@ -61,14 +87,10 @@
                     <span>All Employees</span>
                 </a>
 
-                <a href="{% url 'employee_list' %}" class="sidebar-link">
+                <a href="{% url 'add_employee_page' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'add_employee_page' %} active{% endif %}">
                     <i class="fas fa-user-plus"></i>
                     <span>Add Employee</span>
-                </a>
-
-                <a href="#" class="sidebar-link">
-                    <i class="fas fa-id-card"></i>
-                    <span>Profile Details</span>
                 </a>
             </div>
 
@@ -81,12 +103,6 @@
                     <i class="fas fa-user-check"></i>
                     <span>Attendance Records</span>
                 </a>
-
-                <a href="{% url 'mark_attendance' %}"
-                   class="sidebar-link{% if request.resolver_match.url_name == 'mark_attendance' %} active{% endif %}">
-                    <i class="fas fa-clock"></i>
-                    <span>Mark Attendance</span>
-                </a>
             </div>
 
             <!-- LEAVE MANAGEMENT -->
@@ -94,9 +110,15 @@
                 <p class="sidebar-section-title">Leave Management</p>
 
                 <a href="{% url 'leave_policy' %}"
-                   class="sidebar-link{% if 'leave' in request.path %} active{% endif %}">
+                   class="sidebar-link{% if request.resolver_match.url_name == 'leave_policy' %} active{% endif %}">
                     <i class="fas fa-calendar-alt"></i>
                     <span>Leave Policies</span>
+                </a>
+
+                <a href="{% url 'leave_balance' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'leave_balance' %} active{% endif %}">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>Leave Balance</span>
                 </a>
             </div>
 
@@ -115,12 +137,14 @@
             <div class="sidebar-section">
                 <p class="sidebar-section-title">Recruitment Management</p>
 
-                <a href="#" class="sidebar-link">
+                <a href="{% url 'applicants_list' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'applicants_list' %} active{% endif %}">
                     <i class="fas fa-user-plus"></i>
                     <span>Applicants</span>
                 </a>
 
-                <a href="#" class="sidebar-link">
+                <a href="{% url 'job_openings_list' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'job_openings_list' %} active{% endif %}">
                     <i class="fas fa-briefcase"></i>
                     <span>Job Openings</span>
                 </a>
@@ -130,12 +154,14 @@
             <div class="sidebar-section">
                 <p class="sidebar-section-title">Document Management</p>
 
-                <a href="#" class="sidebar-link">
+                <a href="{% url 'documents_list' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'documents_list' %} active{% endif %}">
                     <i class="fas fa-file-alt"></i>
                     <span>Employee Documents</span>
                 </a>
 
-                <a href="#" class="sidebar-link">
+                <a href="{% url 'add_document' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'add_document' %} active{% endif %}">
                     <i class="fas fa-upload"></i>
                     <span>Upload Documents</span>
                 </a>
@@ -156,21 +182,24 @@
                 </a>
             </div>
 
-            <!-- HR ANALYSIS & REPORTING -->
+            <!-- HR ANALYSIS & REPORTS -->
             <div class="sidebar-section">
                 <p class="sidebar-section-title">HR Analysis & Reports</p>
 
-                <a href="#" class="sidebar-link">
+                <a href="{% url 'employee_reports' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'employee_reports' %} active{% endif %}">
                     <i class="fas fa-chart-bar"></i>
                     <span>Employee Reports</span>
                 </a>
 
-                <a href="#" class="sidebar-link">
+                <a href="{% url 'attendance_reports' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'attendance_reports' %} active{% endif %}">
                     <i class="fas fa-chart-line"></i>
                     <span>Attendance Reports</span>
                 </a>
 
-                <a href="#" class="sidebar-link">
+                <a href="{% url 'salary_reports' %}"
+                   class="sidebar-link{% if request.resolver_match.url_name == 'salary_reports' %} active{% endif %}">
                     <i class="fas fa-file-invoice-dollar"></i>
                     <span>Salary Reports</span>
                 </a>
@@ -203,6 +232,28 @@
     <div id="message" class="message" style="display: none;"></div>
 
     {% block extra_js %}{% endblock %}
+
+    <script>
+        function toggleProfileMenu(event) {
+            event.stopPropagation();
+
+            const dropdown = document.getElementById("profileDropdown");
+
+            if (dropdown.style.display === "block") {
+                dropdown.style.display = "none";
+            } else {
+                dropdown.style.display = "block";
+            }
+        }
+
+        document.addEventListener("click", function () {
+            const dropdown = document.getElementById("profileDropdown");
+
+            if (dropdown) {
+                dropdown.style.display = "none";
+            }
+        });
+    </script>
 
 </body>
 </html>

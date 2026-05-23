@@ -1,0 +1,496 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Job Openings{% endblock %}
+
+{% block header_title %}Recruitment Management - Job Openings{% endblock %}
+
+{% block content %}
+
+<div class="job-page">
+
+    <div class="job-top">
+        <div>
+            <h2>Job Openings</h2>
+            <p>Create and manage job openings for recruitment.</p>
+        </div>
+
+        <div class="job-actions">
+            <button type="button" class="add-job-btn" id="openJobModal">
+                <i class="fas fa-plus"></i>
+                Add Job Opening
+            </button>
+
+            <div class="job-count-card">
+                <i class="fas fa-briefcase"></i>
+                <span>Total Jobs: {{ jobs|length }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="job-table-card">
+        <table class="job-table">
+            <thead>
+                <tr>
+                    <th>Job Title</th>
+                    <th>Department</th>
+                    <th>Location</th>
+                    <th>Job Type</th>
+                    <th>Experience</th>
+                    <th>Salary Range</th>
+                    <th>Status</th>
+                    <th>Posted Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for job in jobs %}
+                <tr>
+                    <td>{{ job.title }}</td>
+                    <td>{{ job.department }}</td>
+                    <td>{{ job.location }}</td>
+                    <td>{{ job.job_type }}</td>
+                    <td>{{ job.experience_required|default:"-" }}</td>
+                    <td>{{ job.salary_range|default:"-" }}</td>
+
+                    <td>
+                        <span class="job-status-badge status-{{ job.job_status|lower|cut:' ' }}">
+                            {{ job.job_status }}
+                        </span>
+                    </td>
+
+                    <td>{{ job.posted_date }}</td>
+
+                    <td>
+                        <form method="post" action="{% url 'delete_job_opening' job.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="delete-job-btn"
+                                    onclick="return confirm('Delete this job opening?');">
+                                <i class="fas fa-trash"></i>
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="empty-table-message">
+                        No job openings found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Add Job Opening Modal -->
+<div id="jobModal" class="job-modal">
+    <div class="job-modal-box">
+
+        <div class="job-modal-header">
+            <h3>Add Job Opening</h3>
+
+            <button type="button" class="job-modal-close" id="closeJobModal">
+                &times;
+            </button>
+        </div>
+
+        <form method="post" action="{% url 'add_job_opening' %}">
+            {% csrf_token %}
+
+            <div class="job-form-grid">
+
+                <div class="form-group">
+                    <label>Job Title</label>
+                    <input type="text" name="title" placeholder="Example: HR Executive" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" name="department" placeholder="Example: Human Resource" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" name="location" placeholder="Example: Bangalore / Remote" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Job Type</label>
+                    <select name="job_type" required>
+                        <option value="">Select job type</option>
+                        <option value="Full-time">Full-time</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Internship">Internship</option>
+                        <option value="Contract">Contract</option>
+                        <option value="Remote">Remote</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Experience Required</label>
+                    <input type="text" name="experience_required" placeholder="Example: Fresher / 1-2 years">
+                </div>
+
+                <div class="form-group">
+                    <label>Salary Range</label>
+                    <input type="text" name="salary_range" placeholder="Example: ₹20,000 - ₹30,000">
+                </div>
+
+                <div class="form-group">
+                    <label>Job Status</label>
+                    <select name="job_status" required>
+                        <option value="Open">Open</option>
+                        <option value="Closed">Closed</option>
+                        <option value="On Hold">On Hold</option>
+                    </select>
+                </div>
+
+                <div class="form-group job-form-full">
+                    <label>Job Description</label>
+                    <textarea name="description" rows="4" placeholder="Write job role, responsibilities, requirements..." required></textarea>
+                </div>
+
+            </div>
+
+            <div class="job-modal-actions">
+                <button type="button" class="cancel-btn" id="cancelJobModal">
+                    Cancel
+                </button>
+
+                <button type="submit" class="save-btn">
+                    Save Job Opening
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<style>
+    .job-page {
+        width: 100%;
+    }
+
+    .job-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 28px;
+        gap: 20px;
+    }
+
+    .job-top h2 {
+        font-size: 24px;
+        color: #111827;
+        margin-bottom: 6px;
+    }
+
+    .job-top p {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .job-actions {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .add-job-btn {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 13px 18px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .add-job-btn:hover {
+        background: #4338ca;
+    }
+
+    .job-count-card {
+        background: #ffffff;
+        padding: 16px 22px;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        font-size: 15px;
+        font-weight: 700;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+    }
+
+    .job-table-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .job-table {
+        width: 100%;
+        min-width: 1150px;
+        border-collapse: collapse;
+    }
+
+    .job-table thead {
+        background: #f9fafb;
+    }
+
+    .job-table th {
+        padding: 16px 18px;
+        text-align: left;
+        color: #374151;
+        font-size: 15px;
+        font-weight: 700;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .job-table td {
+        padding: 15px 18px;
+        color: #111827;
+        font-size: 15px;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .job-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .job-status-badge {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-block;
+    }
+
+    .status-open {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .status-closed {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .status-onhold {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .delete-job-btn {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .delete-job-btn:hover {
+        background: #b91c1c;
+    }
+
+    .empty-table-message {
+        text-align: center;
+        padding: 25px;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .job-modal {
+        display: none;
+        position: fixed;
+        z-index: 6000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.55);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .job-modal-box {
+        background: #ffffff;
+        width: 95%;
+        max-width: 760px;
+        border-radius: 12px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+    }
+
+    .job-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .job-modal-header h3 {
+        margin: 0;
+        color: #111827;
+        font-size: 20px;
+    }
+
+    .job-modal-close {
+        border: none;
+        background: transparent;
+        font-size: 28px;
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    .job-form-grid {
+        padding: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+    }
+
+    .job-form-full {
+        grid-column: 1 / -1;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .form-group input,
+    .form-group select {
+        height: 42px;
+    }
+
+    .form-group textarea {
+        resize: vertical;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .job-modal-actions {
+        padding: 18px 24px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        background: #f9fafb;
+    }
+
+    .cancel-btn {
+        background: #6b7280;
+        color: white;
+        border: none;
+        padding: 11px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .save-btn {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 11px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .save-btn:hover {
+        background: #4338ca;
+    }
+
+    @media (max-width: 768px) {
+        .job-top {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .job-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .job-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .job-modal-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script>
+    const jobModal = document.getElementById("jobModal");
+    const openJobModal = document.getElementById("openJobModal");
+    const closeJobModal = document.getElementById("closeJobModal");
+    const cancelJobModal = document.getElementById("cancelJobModal");
+
+    openJobModal.addEventListener("click", function () {
+        jobModal.style.display = "flex";
+    });
+
+    closeJobModal.addEventListener("click", function () {
+        jobModal.style.display = "none";
+    });
+
+    cancelJobModal.addEventListener("click", function () {
+        jobModal.style.display = "none";
+    });
+
+    window.addEventListener("click", function (event) {
+        if (event.target === jobModal) {
+            jobModal.style.display = "none";
+        }
+    });
+</script>
+
+{% endblock %}

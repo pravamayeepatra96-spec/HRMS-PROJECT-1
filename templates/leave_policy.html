@@ -6,104 +6,359 @@
 {% block header_title %}Employee Leave Policies{% endblock %}
 
 {% block content %}
-            <div class="table-container">
-                <table class="employee-table">
-                    <thead>
-                        <tr>
-                            <th>Emp ID</th>
-                            <th>Name</th>
-                            <th>Role</th>
-                            <th>Paid Leave</th>
-                            <th>Casual Leave</th>
-                            <th>Sick Leave</th>
-                            <th>Comp Leave</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in employee_policies %}
-                        <tr>
-                            <td>{{ item.employee.empid }}</td>
-                            <td>{{ item.employee.name }}</td>
-                            <td><span class="role-badge role-{{ item.employee.role|lower|cut:' ' }}">{{ item.employee.role }}</span></td>
-                            <td>{{ item.policy.paid_leave|default:"0" }}</td>
-                            <td>{{ item.policy.casual_leave|default:"0" }}</td>
-                            <td>{{ item.policy.sick_leave|default:"0" }}</td>
-                            <td>{{ item.policy.compensation_leave|default:"0" }}</td>
-                            <td><button type="button" class="btn btn-edit edit-btn" data-action="{% url 'update_leave_policy' item.employee.id %}" data-paid="{{ item.policy.paid_leave|default:0 }}" data-casual="{{ item.policy.casual_leave|default:0 }}" data-sick="{{ item.policy.sick_leave|default:0 }}" data-comp="{{ item.policy.compensation_leave|default:0 }}">Edit</button></td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="8">No employees found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-<!-- Edit Modal -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Edit Leave Policy</h3>
-            <span class="close">&times;</span>
+
+<div class="leave-policy-page">
+
+    <div class="leave-policy-top">
+        <div>
+            <h2>Leave Policy Management</h2>
+            <p>View and update employee leave balances and policies.</p>
         </div>
-        <form id="editForm" method="post" class="modal-form">
+
+        <div class="leave-count-card">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Total Employees: {{ employee_policies|length }}</span>
+        </div>
+    </div>
+
+    <div class="leave-table-card">
+        <table class="leave-policy-table">
+            <thead>
+                <tr>
+                    <th>Emp ID</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Paid Leave</th>
+                    <th>Casual Leave</th>
+                    <th>Sick Leave</th>
+                    <th>Comp Leave</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in employee_policies %}
+                <tr>
+                    <td>{{ item.employee.empid }}</td>
+                    <td>{{ item.employee.name }}</td>
+
+                    <td>
+                        <span class="role-badge role-{{ item.employee.role|lower|cut:' ' }}">
+                            {{ item.employee.role }}
+                        </span>
+                    </td>
+
+                    <td>{{ item.policy.paid_leave|default:"0" }}</td>
+                    <td>{{ item.policy.casual_leave|default:"0" }}</td>
+                    <td>{{ item.policy.sick_leave|default:"0" }}</td>
+                    <td>{{ item.policy.compensation_leave|default:"0" }}</td>
+
+                    <td>
+                        <button 
+                            type="button" 
+                            class="leave-action-btn edit-leave-btn"
+                            data-action="{% url 'update_leave_policy' item.employee.id %}"
+                            data-paid="{{ item.policy.paid_leave|default:0 }}"
+                            data-casual="{{ item.policy.casual_leave|default:0 }}"
+                            data-sick="{{ item.policy.sick_leave|default:0 }}"
+                            data-comp="{{ item.policy.compensation_leave|default:0 }}"
+                        >
+                            <i class="fas fa-edit"></i>
+                            Edit
+                        </button>
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="empty-table-message">
+                        No employees found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Edit Leave Policy Modal -->
+<div id="editLeaveModal" class="leave-modal">
+    <div class="leave-modal-box">
+
+        <div class="leave-modal-header">
+            <h3>Edit Leave Policy</h3>
+            <button type="button" class="leave-modal-close" id="closeLeaveModal">
+                &times;
+            </button>
+        </div>
+
+        <form id="editLeaveForm" method="post">
             {% csrf_token %}
-            <div class="form-group">
-                <label for="paid_leave">Paid Leave</label>
-                <input type="number" id="paid_leave" name="paid_leave" min="0" required>
+
+            <div class="leave-form-grid">
+
+                <div class="form-group">
+                    <label for="paid_leave">Paid Leave</label>
+                    <input type="number" id="paid_leave" name="paid_leave" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="casual_leave">Casual Leave</label>
+                    <input type="number" id="casual_leave" name="casual_leave" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="sick_leave">Sick Leave</label>
+                    <input type="number" id="sick_leave" name="sick_leave" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="compensation_leave">Comp Leave</label>
+                    <input type="number" id="compensation_leave" name="compensation_leave" min="0" required>
+                </div>
+
             </div>
-            <div class="form-group">
-                <label for="casual_leave">Casual Leave</label>
-                <input type="number" id="casual_leave" name="casual_leave" min="0" required>
-            </div>
-            <div class="form-group">
-                <label for="sick_leave">Sick Leave</label>
-                <input type="number" id="sick_leave" name="sick_leave" min="0" required>
-            </div>
-            <div class="form-group">
-                <label for="compensation_leave">Comp Leave</label>
-                <input type="number" id="compensation_leave" name="compensation_leave" min="0" required>
-            </div>
-            <div class="modal-actions">
-                <button type="button" class="btn btn-secondary" id="cancelEdit">Cancel</button>
-                <button type="submit" class="btn btn-primary">Save</button>
+
+            <div class="leave-modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancelLeaveEdit">
+                    Cancel
+                </button>
+
+                <button type="submit" class="btn btn-primary">
+                    Save
+                </button>
             </div>
         </form>
+
     </div>
 </div>
+
+<style>
+    .leave-policy-page {
+        width: 100%;
+    }
+
+    .leave-policy-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 28px;
+        gap: 20px;
+    }
+
+    .leave-policy-top h2 {
+        font-size: 24px;
+        color: #111827;
+        margin-bottom: 6px;
+    }
+
+    .leave-policy-top p {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .leave-count-card {
+        background: #ffffff;
+        padding: 18px 24px;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10);
+        font-size: 16px;
+        font-weight: 700;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+    }
+
+    .leave-table-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .leave-policy-table {
+        width: 100%;
+        min-width: 1050px;
+        border-collapse: collapse;
+    }
+
+    .leave-policy-table thead {
+        background: #f9fafb;
+    }
+
+    .leave-policy-table th {
+        padding: 16px 18px;
+        text-align: left;
+        color: #374151;
+        font-size: 15px;
+        font-weight: 700;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .leave-policy-table td {
+        padding: 15px 18px;
+        color: #111827;
+        font-size: 15px;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .leave-policy-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .leave-action-btn {
+        border: none;
+        outline: none;
+        background: #16a34a;
+        color: white;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .leave-action-btn:hover {
+        background: #15803d;
+    }
+
+    .empty-table-message {
+        text-align: center;
+        padding: 25px;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .leave-modal {
+        display: none;
+        position: fixed;
+        z-index: 6000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.55);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .leave-modal-box {
+        background: #ffffff;
+        width: 90%;
+        max-width: 520px;
+        border-radius: 12px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+    }
+
+    .leave-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .leave-modal-header h3 {
+        margin: 0;
+        color: #111827;
+        font-size: 20px;
+    }
+
+    .leave-modal-close {
+        border: none;
+        background: transparent;
+        font-size: 26px;
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    .leave-modal-close:hover {
+        color: #111827;
+    }
+
+    .leave-form-grid {
+        padding: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+    }
+
+    .leave-modal-actions {
+        padding: 18px 24px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+        .leave-policy-top {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .leave-count-card {
+            justify-content: center;
+        }
+
+        .leave-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .leave-modal-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+
 {% endblock %}
 
 {% block extra_js %}
+
 <script>
-    var modal = document.getElementById('editModal');
-    var span = document.getElementsByClassName('close')[0];
-    var cancelBtn = document.getElementById('cancelEdit');
-    var editForm = document.getElementById('editForm');
+    const editLeaveModal = document.getElementById("editLeaveModal");
+    const closeLeaveModal = document.getElementById("closeLeaveModal");
+    const cancelLeaveEdit = document.getElementById("cancelLeaveEdit");
+    const editLeaveForm = document.getElementById("editLeaveForm");
 
-    span.onclick = function() {
-        modal.style.display = 'none';
-    }
+    document.querySelectorAll(".edit-leave-btn").forEach(function (button) {
+        button.addEventListener("click", function () {
+            editLeaveForm.action = this.getAttribute("data-action");
 
-    cancelBtn.onclick = function() {
-        modal.style.display = 'none';
-    }
+            document.getElementById("paid_leave").value = this.getAttribute("data-paid");
+            document.getElementById("casual_leave").value = this.getAttribute("data-casual");
+            document.getElementById("sick_leave").value = this.getAttribute("data-sick");
+            document.getElementById("compensation_leave").value = this.getAttribute("data-comp");
 
-    window.onclick = function(event) {
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    }
+            editLeaveModal.style.display = "flex";
+        });
+    });
 
-    document.querySelectorAll('.edit-btn').forEach(button => {
-        button.onclick = function() {
-            editForm.action = this.getAttribute('data-action');
-            document.getElementById('paid_leave').value = this.getAttribute('data-paid');
-            document.getElementById('casual_leave').value = this.getAttribute('data-casual');
-            document.getElementById('sick_leave').value = this.getAttribute('data-sick');
-            document.getElementById('compensation_leave').value = this.getAttribute('data-comp');
-            modal.style.display = 'block';
+    closeLeaveModal.addEventListener("click", function () {
+        editLeaveModal.style.display = "none";
+    });
+
+    cancelLeaveEdit.addEventListener("click", function () {
+        editLeaveModal.style.display = "none";
+    });
+
+    window.addEventListener("click", function (event) {
+        if (event.target === editLeaveModal) {
+            editLeaveModal.style.display = "none";
         }
     });
 </script>
+
 {% endblock %}

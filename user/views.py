@@ -185,6 +185,108 @@ def employee_list(request):
     return render(request, 'dashboard.html', context)
 
 
+def add_employee_page(request):
+
+    if 'user_id' not in request.session:
+        return redirect('login')
+
+    company_id = request.session['company_id']
+    company = get_object_or_404(Company, id=company_id)
+
+    if request.method == 'POST':
+
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        phone_no = request.POST.get('phone_no')
+        role = request.POST.get('role')
+        joining_date = request.POST.get('joining_date')
+        password = request.POST.get('password')
+
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already exists.')
+            return redirect('add_employee_page')
+
+        max_id = User.objects.filter(
+            Company=company
+        ).aggregate(
+            max_id=models.Max('id')
+        )['max_id'] or 0
+
+        empid = f"EMP{str(max_id + 1).zfill(3)}"
+
+        User.objects.create(
+            Company=company,
+            empid=empid,
+            name=name,
+            email=email,
+            phone_no=phone_no,
+            password=password,
+            role=role,
+            joining_date=joining_date,
+            status=1
+        )
+
+        messages.success(request, 'Employee added successfully.')
+        return redirect('employee_list')
+
+    context = {
+        'user_name': request.session['user_name'],
+        'user_role': request.session['user_role'],
+        'company_name': request.session['company_name'],
+    }
+
+    return render(request, 'add_employee_page.html', context)
+
+
+def profile_details(request):
+
+    if 'user_id' not in request.session:
+        return redirect('login')
+
+    user_id = request.session['user_id']
+
+    profile_user = get_object_or_404(
+        User,
+        id=user_id
+    )
+
+    context = {
+        'profile_user': profile_user,
+        'company': profile_user.Company,
+
+        'user_name': request.session['user_name'],
+        'user_role': request.session['user_role'],
+        'company_name': request.session['company_name'],
+    }
+
+    return render(request, 'profile_details.html', context)
+
+
+def employee_profile_details(request, employee_id):
+
+    if 'user_id' not in request.session:
+        return redirect('login')
+
+    company_id = request.session['company_id']
+
+    profile_user = get_object_or_404(
+        User,
+        id=employee_id,
+        Company_id=company_id
+    )
+
+    context = {
+        'profile_user': profile_user,
+        'company': profile_user.Company,
+
+        'user_name': request.session['user_name'],
+        'user_role': request.session['user_role'],
+        'company_name': request.session['company_name'],
+    }
+
+    return render(request, 'profile_details.html', context)
+
+
 @csrf_exempt
 def add_employee(request):
 
@@ -354,7 +456,7 @@ def delete_employee(request, employee_id):
         'message': 'Invalid request method'
     })
 
-git a
+
 def logout(request):
 
     request.session.flush()

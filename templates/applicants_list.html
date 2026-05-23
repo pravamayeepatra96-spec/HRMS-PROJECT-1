@@ -1,0 +1,480 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Applicants{% endblock %}
+
+{% block header_title %}Recruitment Management - Applicants{% endblock %}
+
+{% block content %}
+
+<div class="recruitment-page">
+
+    <div class="recruitment-top">
+        <div>
+            <h2>Applicants</h2>
+            <p>View candidate applications and recruitment status.</p>
+        </div>
+
+        <div class="recruitment-actions">
+            <button type="button" class="add-applicant-btn" id="openApplicantModal">
+                <i class="fas fa-plus"></i>
+                Add Applicant
+            </button>
+
+            <div class="recruitment-count-card">
+                <i class="fas fa-user-plus"></i>
+                <span>Total Applicants: {{ applicants|length }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="recruitment-table-card">
+        <table class="recruitment-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone No</th>
+                    <th>Position Applied</th>
+                    <th>Qualification</th>
+                    <th>Experience</th>
+                    <th>Status</th>
+                    <th>Applied Date</th>
+                    <th>Resume</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for applicant in applicants %}
+                <tr>
+                    <td>{{ applicant.name }}</td>
+                    <td>{{ applicant.email }}</td>
+                    <td>{{ applicant.phone_no }}</td>
+                    <td>{{ applicant.position_applied }}</td>
+                    <td>{{ applicant.qualification|default:"-" }}</td>
+                    <td>{{ applicant.experience|default:"-" }}</td>
+
+                    <td>
+                        <span class="applicant-status-badge">
+                            {{ applicant.application_status }}
+                        </span>
+                    </td>
+
+                    <td>{{ applicant.applied_date }}</td>
+
+                    <td>
+                        {% if applicant.resume %}
+                            <a href="{{ applicant.resume.url }}" target="_blank" class="resume-link">
+                                View Resume
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <form method="post" action="{% url 'delete_applicant' applicant.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="delete-applicant-btn"
+                                    onclick="return confirm('Delete this applicant?');">
+                                Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="empty-table-message">
+                        No applicants found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Add Applicant Modal -->
+<div id="applicantModal" class="applicant-modal">
+    <div class="applicant-modal-box">
+
+        <div class="applicant-modal-header">
+            <h3>Add Applicant</h3>
+            <button type="button" class="applicant-modal-close" id="closeApplicantModal">
+                &times;
+            </button>
+        </div>
+
+        <form method="post" action="{% url 'add_applicant' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="applicant-form-grid">
+
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Phone No</label>
+                    <input type="text" name="phone_no" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Position Applied</label>
+                    <input type="text" name="position_applied" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Qualification</label>
+                    <input type="text" name="qualification">
+                </div>
+
+                <div class="form-group">
+                    <label>Experience</label>
+                    <input type="text" name="experience" placeholder="Example: 2 years / Fresher">
+                </div>
+
+                <div class="form-group">
+                    <label>Application Status</label>
+                    <select name="application_status">
+                        <option value="Applied">Applied</option>
+                        <option value="Shortlisted">Shortlisted</option>
+                        <option value="Interview Scheduled">Interview Scheduled</option>
+                        <option value="Selected">Selected</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Resume</label>
+                    <input type="file" name="resume">
+                </div>
+
+            </div>
+
+            <div class="applicant-modal-actions">
+                <button type="button" class="cancel-btn" id="cancelApplicantModal">
+                    Cancel
+                </button>
+
+                <button type="submit" class="save-btn">
+                    Save Applicant
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+<style>
+    .recruitment-page {
+        width: 100%;
+    }
+
+    .recruitment-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 28px;
+        gap: 20px;
+    }
+
+    .recruitment-top h2 {
+        font-size: 24px;
+        color: #111827;
+        margin-bottom: 6px;
+    }
+
+    .recruitment-top p {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .recruitment-actions {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .add-applicant-btn {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 13px 18px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .add-applicant-btn:hover {
+        background: #4338ca;
+    }
+
+    .recruitment-count-card {
+        background: #ffffff;
+        padding: 16px 22px;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        font-size: 15px;
+        font-weight: 700;
+        color: #111827;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        white-space: nowrap;
+    }
+
+    .recruitment-table-card {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: 70vh;
+    }
+
+    .recruitment-table {
+        width: 100%;
+        min-width: 1250px;
+        border-collapse: collapse;
+    }
+
+    .recruitment-table thead {
+        background: #f9fafb;
+    }
+
+    .recruitment-table th {
+        padding: 16px 18px;
+        text-align: left;
+        color: #374151;
+        font-size: 15px;
+        font-weight: 700;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .recruitment-table td {
+        padding: 15px 18px;
+        color: #111827;
+        font-size: 15px;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+
+    .recruitment-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .applicant-status-badge {
+        background: #eef2ff;
+        color: #3730a3;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-block;
+    }
+
+    .resume-link {
+        background: #2563eb;
+        color: white;
+        padding: 7px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .resume-link:hover {
+        background: #1d4ed8;
+    }
+
+    .delete-applicant-btn {
+        background: #dc2626;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .delete-applicant-btn:hover {
+        background: #b91c1c;
+    }
+
+    .empty-table-message {
+        text-align: center;
+        padding: 25px;
+        color: #6b7280;
+        font-weight: 600;
+    }
+
+    .applicant-modal {
+        display: none;
+        position: fixed;
+        z-index: 6000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.55);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .applicant-modal-box {
+        background: #ffffff;
+        width: 95%;
+        max-width: 700px;
+        border-radius: 12px;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+    }
+
+    .applicant-modal-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .applicant-modal-header h3 {
+        margin: 0;
+        color: #111827;
+        font-size: 20px;
+    }
+
+    .applicant-modal-close {
+        border: none;
+        background: transparent;
+        font-size: 28px;
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    .applicant-form-grid {
+        padding: 24px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+    }
+
+    .form-group label {
+        display: block;
+        font-size: 14px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        height: 42px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 0 12px;
+        font-size: 14px;
+        outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .applicant-modal-actions {
+        padding: 18px 24px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        background: #f9fafb;
+    }
+
+    .cancel-btn {
+        background: #6b7280;
+        color: white;
+        border: none;
+        padding: 11px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .save-btn {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 11px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 700;
+    }
+
+    .save-btn:hover {
+        background: #4338ca;
+    }
+
+    @media (max-width: 768px) {
+        .recruitment-top {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .recruitment-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .applicant-form-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    const applicantModal = document.getElementById("applicantModal");
+    const openApplicantModal = document.getElementById("openApplicantModal");
+    const closeApplicantModal = document.getElementById("closeApplicantModal");
+    const cancelApplicantModal = document.getElementById("cancelApplicantModal");
+
+    openApplicantModal.addEventListener("click", function () {
+        applicantModal.style.display = "flex";
+    });
+
+    closeApplicantModal.addEventListener("click", function () {
+        applicantModal.style.display = "none";
+    });
+
+    cancelApplicantModal.addEventListener("click", function () {
+        applicantModal.style.display = "none";
+    });
+
+    window.addEventListener("click", function (event) {
+        if (event.target === applicantModal) {
+            applicantModal.style.display = "none";
+        }
+    });
+</script>
+
+{% endblock %}
