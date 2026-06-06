@@ -22,6 +22,8 @@ urlpatterns = [
     path('', include('document.urls')),
     
     path('', include('reports.urls')),
+    
+    path('', include('feedback.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

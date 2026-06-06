@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}HRMS{% endblock %}</title>
 
-    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=100">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=103">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     {% block extra_css %}{% endblock %}
@@ -168,19 +168,21 @@
             </div>
 
             <!-- FEEDBACK / QUERY MANAGEMENT -->
-            <div class="sidebar-section">
+             <div class="sidebar-section">
                 <p class="sidebar-section-title">Feedback / Query</p>
+                
+                <a href="{% url 'queries_list' %}"
+                class="sidebar-link{% if request.resolver_match.url_name == 'queries_list' %} active{% endif %}">
+                <i class="fas fa-question-circle"></i>
+                <span>Queries</span>
+            </a>
 
-                <a href="#" class="sidebar-link">
-                    <i class="fas fa-question-circle"></i>
-                    <span>Queries</span>
-                </a>
-
-                <a href="#" class="sidebar-link">
-                    <i class="fas fa-comment-dots"></i>
-                    <span>Feedback</span>
-                </a>
-            </div>
+    <a href="{% url 'feedback_list' %}"
+       class="sidebar-link{% if request.resolver_match.url_name == 'feedback_list' %} active{% endif %}">
+        <i class="fas fa-comment-dots"></i>
+        <span>Feedback</span>
+    </a>
+</div>
 
             <!-- HR ANALYSIS & REPORTS -->
             <div class="sidebar-section">
@@ -205,20 +207,26 @@
                 </a>
             </div>
 
-            <!-- ACCOUNT -->
-            <div class="sidebar-section">
-                <p class="sidebar-section-title">Account</p>
+           <!-- ACCOUNT -->
+<div class="sidebar-section">
+    <p class="sidebar-section-title">Account</p>
 
-                <a href="#" class="sidebar-link">
-                    <i class="fas fa-key"></i>
-                    <span>Password Reset</span>
-                </a>
+    <a href="{% url 'profile_details' %}"
+       class="sidebar-link{% if request.resolver_match.url_name == 'profile_details' %} active{% endif %}">
+        <i class="fas fa-id-card"></i>
+        <span>My Profile</span>
+    </a>
 
-                <a href="{% url 'logout' %}" class="sidebar-link">
-                    <i class="fas fa-sign-out-alt"></i>
-                    <span>Logout</span>
-                </a>
-            </div>
+    <a href="#" class="sidebar-link">
+        <i class="fas fa-key"></i>
+        <span>Change Password</span>
+    </a>
+
+    <a href="{% url 'logout' %}" class="sidebar-link">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>Logout</span>
+    </a>
+</div>
 
         </nav>
     </aside>
@@ -239,10 +247,12 @@
 
             const dropdown = document.getElementById("profileDropdown");
 
-            if (dropdown.style.display === "block") {
-                dropdown.style.display = "none";
-            } else {
-                dropdown.style.display = "block";
+            if (dropdown) {
+                if (dropdown.style.display === "block") {
+                    dropdown.style.display = "none";
+                } else {
+                    dropdown.style.display = "block";
+                }
             }
         }
 
@@ -251,6 +261,23 @@
 
             if (dropdown) {
                 dropdown.style.display = "none";
+            }
+        });
+
+        // Keep sidebar scroll position after page reload/navigation
+        document.addEventListener("DOMContentLoaded", function () {
+            const sidebar = document.querySelector(".sidebar");
+
+            if (sidebar) {
+                const savedScrollPosition = localStorage.getItem("sidebarScrollPosition");
+
+                if (savedScrollPosition !== null) {
+                    sidebar.scrollTop = parseInt(savedScrollPosition, 10);
+                }
+
+                sidebar.addEventListener("scroll", function () {
+                    localStorage.setItem("sidebarScrollPosition", sidebar.scrollTop);
+                });
             }
         });
     </script>

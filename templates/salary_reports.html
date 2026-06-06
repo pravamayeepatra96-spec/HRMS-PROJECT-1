@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Salary Reports{% endblock %}
+{% block header_title %}Salary Reports{% endblock %}
+
+{% block content %}
+
+<div class="content-card">
+
+    <div class="page-header">
+        <div>
+            <h2>Salary Reports</h2>
+            <p class="page-subtitle">
+                View salary-wise HR reports, payroll summaries, bonuses, deductions, and pending salary details.
+            </p>
+        </div>
+    </div>
+
+    <div class="stats">
+
+        <div class="stat-card">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>Total Salary Records</span>
+        </div>
+
+        <div class="stat-card">
+            <i class="fas fa-clock"></i>
+            <span>Pending Salary</span>
+        </div>
+
+        <div class="stat-card">
+            <i class="fas fa-plus-circle"></i>
+            <span>Total Bonuses</span>
+        </div>
+
+        <div class="stat-card">
+            <i class="fas fa-minus-circle"></i>
+            <span>Total Deductions</span>
+        </div>
+
+    </div>
+
+    <br>
+
+    <div class="empty-state">
+        <i class="fas fa-file-invoice-dollar"></i>
+        <h3>Salary Reports Page</h3>
+        <p>
+            This page will later show monthly payroll reports, employee-wise salary summaries,
+            pending salary records, bonuses, deductions, and net salary analysis.
+        </p>
+    </div>
+sal
+</div>
+
+{% endblock %}

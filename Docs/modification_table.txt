@@ -1,3 +1,4 @@
+Salary
 Bonuses
 Deductions
 Net salary
@@ -17,3 +18,37 @@ total_salary
 generated_date
 
 👉 Makes it look like a real HR system
+
+ID → Unique row number
+EmpID → Which employee (link to Employee table 🔗)
+TotalLeaves → Total leaves given (e.g., 20)
+UsedLeaves → Leaves already taken
+RemainingLeaves → Leaves left
+Year → Which year (2025, 2026…)
+Status → Active (1) / Inactive (0)
+
+Sign up form
+
+Basic User Details
+Full Name
+Username (optional if using email login)
+Email Address (unique, important for login)
+Phone Number (optional but useful for verification)
+🔹 2. Security Details
+Password
+Confirm Password
+Security Question (optional)
+🔹 3. Role / Access Details (important for HRMS)
+User Role (Admin / Employee / HR / Manager)
+🔹 4. System Fields (usually auto-generated, not user input)
+User ID (auto-increment)
+Created At (timestamp)
+Status (Active/Inactive default = Active)
+
+If you want a simple version:
+
+phone number/email
+Password
+Confirm Password
+
+Login

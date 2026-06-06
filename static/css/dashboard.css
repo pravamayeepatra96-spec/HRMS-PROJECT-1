@@ -818,3 +818,34 @@ body {
     color: #0f2a4d;
     margin-bottom: 6px;
 }
+
+/* ================= SIDEBAR SCROLL STABILITY FIX ================= */
+
+.sidebar {
+    width: 260px;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+}
+
+.sidebar-nav {
+    padding-bottom: 90px;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+    background: #f8fafc;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
